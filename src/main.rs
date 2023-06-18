@@ -3,12 +3,17 @@
 use std::process::Command;
 
 fn main() {
+    print!("Simulation:");
     let mut simulation = Command::new("../UAV_physics_engine/build/uav")
-                     .arg("-c").arg("../UAV_physics_engine/src/config.xml")
+                     .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
+                     .arg("-n").arg("test1")
                      .spawn()
                      .expect("failed to execute simulation process");
 
+    print!("Controller:");
     let mut controller = Command::new("../UAV_controller/build/controller")
+                     .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
+                     .arg("-n").arg("test1")
                      .spawn()
                      .expect("failed to execute controller process");
 
