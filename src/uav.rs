@@ -17,7 +17,23 @@ impl DroneState {
 
 impl ToString for DroneState {
     fn to_string(&self) -> String {
-        format!("t: {}", self.time)
+        let mut result = String::with_capacity(200);
+        result.push_str(&self.time.to_string());
+        result.push(',');
+        for i in 0..6 {
+            result.push_str(&self.pos[i].to_string());
+            result.push(','); 
+        }
+        for i in 0..6 {
+            result.push_str(&self.vel[i].to_string());
+            result.push(','); 
+        }
+        for elem in &self.om {
+            result.push_str(&elem.to_string());
+            result.push(','); 
+        }
+        result.pop();
+        result
     }
 }
 
