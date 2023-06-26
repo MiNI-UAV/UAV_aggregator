@@ -31,23 +31,24 @@ impl Clients
 
                 taken_name.insert(msg.to_string());
                 let mut drones = drones.lock().unwrap();
-                let uav_address = drones.startUAV(msg);
+                let (drone_no,uav_address) = drones.startUAV(msg);
                 println!("Started new drone with name: {}", msg);
-                let steer_xsub_socket = _ctx.socket(zmq::XSUB).unwrap();
+                let steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
                 let address = format!("tcp://127.0.0.1:{}", next_port);
-                steer_xsub_socket.bind(&address).unwrap();
+                steer_pair_socket.bind(&address).unwrap();
                 let steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
                 steer_xpub_socket.connect(&uav_address).unwrap();
-
                 proxies.push(
                     thread::spawn(move ||
                     {
-                        zmq::proxy(&steer_xsub_socket, &steer_xpub_socket).expect("Proxy err");
+                        zmq::proxy(&steer_pair_socket, &steer_xpub_socket).expect("Proxy err");
+                        println!("Closing proxy");
                     })
-                );
-                
+                );       
                 println!("Ready to connect client on TCP: {}", next_port);
                 let mut reply = String::new();
+                reply.push_str(&drone_no.to_string());
+                reply.push(',');
                 reply.push_str(&next_port.to_string());
                 replyer_socket.send(&reply, 0).unwrap();
                 next_port = next_port + 1;

@@ -40,12 +40,12 @@ impl Drones
         Drones {ctx: _ctx, drones: Vec::new(), states: states, _state_publisher: publisher}
     }
 
-    pub fn startUAV(&mut self, name: &str) -> String
+    pub fn startUAV(&mut self, name: &str) -> (usize,String)
     {
         let state = Arc::new(Mutex::new(DroneState::new()));
         self.states.lock().unwrap().push(state.clone());
         self.drones.push(UAV::new(&mut self.ctx, name,state));
-        format!("ipc:///tmp/{}/steer", name)
+        (self.drones.len()-1,format!("ipc:///tmp/{}/steer", name))
     }
 
     pub fn printState(&self)

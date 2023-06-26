@@ -13,6 +13,6 @@ fn main() {
     let mut _clients = clients::Clients::new(ctx.clone(),_drones.clone());
 
     loop {
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(1000));
     }
 }
