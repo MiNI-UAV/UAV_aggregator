@@ -1,17 +1,18 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
+use ndarray::{Array1,arr1};
 
 
 pub struct DroneState
 {
     time: f32,
-    pos: [f32; 6],
-    vel: [f32; 6],
+    pos: Array1<f32>,
+    vel: Array1<f32>,
     om: Vec<f32>,
 }
 
 impl DroneState {
     pub fn new() -> Self {
-        DroneState {time: -1.0, pos: [-1.0; 6], vel: [-1.0; 6], om: Vec::new()}
+        DroneState {time: -1.0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6]), om: Vec::new()}
     }
 }
 
@@ -98,7 +99,7 @@ impl UAV
 
         let parseToArray = |msg: &str, start: usize|
         {
-            let mut array: [f32;6] = [-1.0; 6];
+            let mut array: Array1<f32> = arr1(&[-1.0; 6]);
             let trimmed = msg.chars().skip(start).collect::<String>();
             let items = trimmed.split(',').take(6);
 
