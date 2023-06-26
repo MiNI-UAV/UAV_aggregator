@@ -19,6 +19,7 @@ impl Drones
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
             publisher_socket.bind("tcp://127.0.0.1:9090").expect("Bind error tcp 9090");
+            println!("State publisher started on TCP: {}", 9090);
             loop {
                 let state = state_arc.lock().unwrap();
                 if !state.is_empty()
@@ -33,19 +34,18 @@ impl Drones
                     //println!("{}",result);
                 }
                 drop(state);
-
                 thread::sleep(time::Duration::from_millis(15));
             }
         });
-        println!("Created");
         Drones {ctx: _ctx, drones: Vec::new(), states: states, _state_publisher: publisher}
     }
 
-    pub fn startUAV(&mut self, name: &str)
+    pub fn startUAV(&mut self, name: &str) -> String
     {
         let state = Arc::new(Mutex::new(DroneState::new()));
         self.states.lock().unwrap().push(state.clone());
         self.drones.push(UAV::new(&mut self.ctx, name,state));
+        format!("ipc:///tmp/{}/steer", name)
     }
 
     pub fn printState(&self)
