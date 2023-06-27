@@ -14,6 +14,11 @@ impl DroneState {
     pub fn new() -> Self {
         DroneState {time: -1.0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6]), om: Vec::new()}
     }
+
+    pub fn getPos(&self) -> Array1<f32>
+    {
+        self.pos.clone()
+    }
 }
 
 impl ToString for DroneState {
@@ -44,6 +49,7 @@ pub struct UAV
     simulation: Child,
     controller: Child,
     steer_socket: zmq::Socket,
+    control_socket: zmq::Socket,
     state_listener: Option<JoinHandle<()>>
 }
 
@@ -71,11 +77,17 @@ impl UAV
             steer_socket:  _ctx.socket(zmq::PUB)
                                 .expect("creating socket error"),
 
+            control_socket:  _ctx.socket(zmq::REQ)
+                                .expect("creating socket error"),
+
             state_listener: Option::None
         };
 
         uav.steer_socket.connect(&format!("ipc:///tmp/{}/steer",uav.name.to_owned()))
                         .expect("steer connect error");
+
+        uav.control_socket.connect(&format!("ipc:///tmp/{}/control",uav.name.to_owned()))
+                        .expect("control connect error");
 
         UAV::startListeners(_ctx, &mut uav, state);
         println!("Created new drone: {}!", uav.name);      
@@ -154,10 +166,28 @@ impl UAV
         }));
     }
 
-    pub fn sendSteeringMsg(self, msg: &str)
+    fn _sendSteeringMsg(&self, msg: &str)
     {
-        println!("Msg: {}", msg);
+        self.steer_socket.send(&msg, 0).unwrap();
     }
+
+    fn _sendControlMsg(&self, msg: &str)
+    {
+        self.control_socket.send(&msg, 0).unwrap();
+    }
+
+    pub fn sendWind(&self, wind: Array1<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("c:");
+        command.push_str(&wind[0].to_string());
+        command.push(',');
+        command.push_str(&wind[1].to_string());
+        command.push(',');
+        command.push_str(&wind[2].to_string());
+        self._sendControlMsg(&command);
+    }
+
 }
 
 impl Drop for UAV {

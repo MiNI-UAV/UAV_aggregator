@@ -5,8 +5,8 @@ pub struct Drones
 {
 
     ctx: zmq::Context,
-    drones: Vec<UAV>,
-    states: Arc<Mutex<Vec<Arc<Mutex<DroneState>>>>>,
+    pub drones: Vec<UAV>,
+    pub states: Arc<Mutex<Vec<Arc<Mutex<DroneState>>>>>,
     _state_publisher: JoinHandle<()>
 }
 
