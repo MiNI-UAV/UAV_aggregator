@@ -1,6 +1,7 @@
 use std::{sync::{Arc, Mutex}, thread::{JoinHandle, self}, time};
-
+use ndarray::Array1;
 use crate::uav::{UAV,DroneState};
+
 pub struct Drones
 {
 
@@ -54,6 +55,20 @@ impl Drones
             let state = item.lock();
             println!("{}:{}",i,state.unwrap().to_string());
         }
+    }
+
+    pub fn getPositions(&self) -> Vec<Array1<f32>>
+    {
+        let mut pos = Vec::new();
+        let state = self.states.lock().unwrap();
+        if !state.is_empty()
+        {
+            for elem in state.iter()  {
+                pos.push(elem.lock().unwrap().getPos());
+            }
+        }
+        drop(state);
+        pos
     }
 
 

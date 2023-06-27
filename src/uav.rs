@@ -174,18 +174,22 @@ impl UAV
     fn _sendControlMsg(&self, msg: &str)
     {
         self.control_socket.send(&msg, 0).unwrap();
+        let mut msg = zmq::Message::new();
+        self.control_socket.recv(&mut msg, 0).unwrap();
+        assert!(msg.as_str().unwrap().contains("ok"));
     }
 
-    pub fn sendWind(&self, wind: Array1<f32>)
+    pub fn sendWind(&self, wind: &Array1<f32>)
     {
         let mut command = String::with_capacity(30);
-        command.push_str("c:");
+        command.push_str("w:");
         command.push_str(&wind[0].to_string());
         command.push(',');
         command.push_str(&wind[1].to_string());
         command.push(',');
         command.push_str(&wind[2].to_string());
         self._sendControlMsg(&command);
+
     }
 
 }

@@ -1,4 +1,4 @@
-use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc}};
+use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc}, time};
 use ndarray::{Array1,arr1};
 
 use crate::drones::Drones;
@@ -17,26 +17,30 @@ impl Wind
         {
             loop {
                 let drones_lck = drones.lock().unwrap();
-                for (i,state) in drones_lck.states.lock().unwrap().iter().enumerate() {
-                    let state_lck = state.lock().unwrap();
-                    let pos = state_lck.getPos();
-                    drop(state_lck);
+                let pos = drones_lck.getPositions();
+                drop(drones_lck);
+                let wind: Vec<Array1<f32>> = pos.iter().map(|p| Wind::calcWind(p)).collect();
+                thread::sleep(time::Duration::from_millis(100));
+                let drones_lck = drones.lock().unwrap();
+                for (i,w) in wind.iter().enumerate()
+                {
                     if let Some(d) = drones_lck.drones.get(i)
                     {
-                        d.sendWind(Wind::calcWind(pos));
+                        d.sendWind(w);
                     }
                 }
-
+                drop(drones_lck);
+                thread::sleep(time::Duration::from_millis(100));
             }
         });
         Wind { wind_reqester: Some(wind_reqester) }
     }
 
-    fn calcWind(pos: Array1<f32>) -> Array1<f32>
+    fn calcWind(pos: &Array1<f32>) -> Array1<f32>
     {
         let mut result = arr1(&[0.0,0.0,0.0]);
-        result[0] = -0.5 * pos[2];
-        result[1] = -0.2 * pos[2];
+        result[0] = -0.5 * pos[2] + 20.0;
+        result[1] = -0.2 * pos[2] + 10.0;
         result
     }
 }
