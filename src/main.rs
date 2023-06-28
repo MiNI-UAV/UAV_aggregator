@@ -17,6 +17,13 @@ fn main() {
     let _colision_detector = collision::CollisionDetector::new(_drones.clone());
 
     loop {
-        thread::sleep(time::Duration::from_millis(1000));
+        // let drone = _drones.lock().unwrap();
+        // if let Some(d) = drone.drones.get(0)
+        // {
+        //     d.dropOrShot(Some(0.008),Some(350.0),Some([0.0,0.1,0.1]));
+
+        // }
+        // drop(drone);
+        thread::sleep(time::Duration::from_millis(3000));
     }
 }

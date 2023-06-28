@@ -189,7 +189,23 @@ impl UAV
         command.push(',');
         command.push_str(&wind[2].to_string());
         self._sendControlMsg(&command);
+    }
 
+    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut r: Option<[f32;3]>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("d:");
+        command.push_str(&mass.get_or_insert(0.03).to_string());
+        command.push(',');
+        command.push_str(&speed.get_or_insert(150.0).to_string());
+        command.push(',');
+        let r = r.get_or_insert([0.0,0.0,0.1]);
+        command.push_str(&r[0].to_string());
+        command.push(',');
+        command.push_str(&r[1].to_string());
+        command.push(',');
+        command.push_str(&r[2].to_string());
+        self._sendControlMsg(&command);
     }
 
 }

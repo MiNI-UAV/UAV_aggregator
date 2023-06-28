@@ -21,18 +21,23 @@ impl Clients
             loop {
                 let mut request =  zmq::Message::new();
                 replyer_socket.recv(&mut request, 0).unwrap();
-                let msg = request.as_str().unwrap();
-                if msg.is_empty() || taken_name.contains(msg) {
+                let mut drone_name = request.as_str().unwrap().to_string();
+                if drone_name.is_empty(){
                     let mut reply = String::new();
                     reply.push_str("-1");
                     replyer_socket.send(&reply, 0).unwrap(); 
                     continue;
                 }
-
-                taken_name.insert(msg.to_string());
+                let no = taken_name.iter().map(|name|  if name.contains(&drone_name) {1} else {0}).count();
+                if no > 0
+                {
+                    drone_name.push('_');
+                    drone_name.push_str(&no.to_string());
+                }
+                taken_name.insert(drone_name.to_string());
                 let mut drones = drones.lock().unwrap();
-                let (drone_no,uav_address) = drones.startUAV(msg);
-                println!("Started new drone with name: {}", msg);
+                let (drone_no,uav_address) = drones.startUAV(&drone_name);
+                println!("Started new drone with name: {}", drone_name);
                 let steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
                 let address = format!("tcp://127.0.0.1:{}", next_port);
                 steer_pair_socket.bind(&address).unwrap();
