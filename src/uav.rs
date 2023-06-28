@@ -171,12 +171,14 @@ impl UAV
         self.steer_socket.send(&msg, 0).unwrap();
     }
 
-    fn _sendControlMsg(&self, msg: &str)
+    fn _sendControlMsg(&self, msg: &str) -> String
     {
         self.control_socket.send(&msg, 0).unwrap();
         let mut msg = zmq::Message::new();
         self.control_socket.recv(&mut msg, 0).unwrap();
-        assert!(msg.as_str().unwrap().contains("ok"));
+        let rep = msg.as_str().unwrap();
+        assert!(rep.contains("ok"));
+        rep.to_string()
     }
 
     pub fn sendWind(&self, wind: &Array1<f32>)
@@ -205,7 +207,8 @@ impl UAV
         command.push_str(&r[1].to_string());
         command.push(',');
         command.push_str(&r[2].to_string());
-        self._sendControlMsg(&command);
+        let rep = self._sendControlMsg(&command);
+        println!("Obj is heading: {}",rep);
     }
 
 }
