@@ -7,12 +7,13 @@ pub mod drones;
 pub mod uav;
 pub mod wind;
 pub mod collision;
+pub mod objects;
 
 fn main() {
     let ctx = zmq::Context::new();
-    
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone());
+    let _objects = objects::Objects::new(ctx.clone());
     let _wind = wind::Wind::new(_drones.clone());
     let _colision_detector = collision::CollisionDetector::new(_drones.clone());
 
