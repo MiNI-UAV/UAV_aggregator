@@ -35,6 +35,10 @@ impl Wind
                 let pos = objects_lck.getPositions();
                 drop(objects_lck);
                 let wind: Vec<(usize,Array1<f32>)> = pos.iter().map(|p| (p.0,Wind::calcWind(&p.1))).collect();
+                if wind.is_empty()
+                {
+                    continue;
+                }
                 thread::sleep(time::Duration::from_millis(50));
                 let objects_lck = objects.lock().unwrap();
                 objects_lck.updateWind(wind);

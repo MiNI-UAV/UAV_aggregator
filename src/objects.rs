@@ -2,6 +2,7 @@ use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex}, process::{Command, Std
 use ndarray::{Array1,arr1};
 
 
+#[derive(Debug)]
 pub struct ObjectState
 {
     pub id: usize,
@@ -18,7 +19,7 @@ impl ObjectState {
         let mut id: usize = 0;
         let mut pos: Array1<f32> = arr1(&[-1.0;3]);
         let mut vel: Array1<f32> = arr1(&[-1.0;3]);
-        let list = info.split(";");
+        let list = info.split(",");
         for (i,elem) in list.into_iter().enumerate()
         {
             match i {
@@ -56,46 +57,47 @@ impl Objects
         let ctx = _ctx.clone();
         let proxy: JoinHandle<()> = thread::spawn(move ||
         {
-            let mut capture_socket = ctx.socket(zmq::PAIR).expect("Capture socket error");
-            capture_socket.bind("inproc://obj_state").unwrap();
             let mut listener_socket = ctx.socket(zmq::XSUB).expect("Sub socket error");
+            //listener_socket.set_subscribe(b"").unwrap();
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
             publisher_socket.bind("tcp://127.0.0.1:9100").expect("Bind error tcp 9100");
             println!("Object state proxy started on TCP: {}", 9100);
-            zmq::proxy_with_capture(&mut listener_socket,&mut publisher_socket,&mut capture_socket).unwrap();
+            zmq::proxy(&mut listener_socket,&mut publisher_socket).unwrap();
         });
         let ctx = _ctx.clone();
         let time_access = time.clone();
         let states_access = states.clone();
         let capture: JoinHandle<()> = thread::spawn(move ||
         {
-            let capture_socket = ctx.socket(zmq::PAIR).expect("Capture socket error");
-            capture_socket.connect("inproc://obj_state").unwrap();
-            let mut obj_states_msg =  zmq::Message::new();
-            capture_socket.recv(&mut obj_states_msg, 0).unwrap();
-            let obj_info = obj_states_msg.as_str().unwrap().to_string();
-            Self::parseInfo(time_access,states_access,obj_info);
+            loop {
+                let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
+                capture_socket.set_subscribe(b"").unwrap();
+                capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
+                let mut obj_states_msg =  zmq::Message::new();
+                capture_socket.recv(&mut obj_states_msg, 0).unwrap();
+                let obj_info = obj_states_msg.as_str().unwrap().to_string();
+                Self::parseInfo(&time_access,&states_access,obj_info);
+            }
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
         Objects {_ctx: _ctx,_time: time,states: states, control_socket: control_socket, _drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
     }
 
-    fn parseInfo(time: Arc<Mutex<f32>>, states: Arc<Mutex<Vec<ObjectState>>>, info: String)
+    fn parseInfo(time: &Arc<Mutex<f32>>, states: &Arc<Mutex<Vec<ObjectState>>>, info: String)
     {
-        if info.len() < 2 {
-            return;
-        }
         let mut newStates = Vec::new();
-        println!("Message: {}", info);
         let list = info.split(";");
         for (i,elem) in list.into_iter().enumerate()
         {
+            if elem.len() <= 1
+            {
+                continue;
+            }
             if i == 0
             {
-                let mut time_lck = time.lock().unwrap() ;
-                println!("Message: {}", elem);
+                let mut time_lck = time.lock().unwrap();
                 *time_lck = elem.parse::<f32>().unwrap();
                 drop(time_lck);
                 continue;
@@ -109,6 +111,7 @@ impl Objects
 
     fn _sendControlMsg(&self, msg: &str) -> String
     {
+        println!("msg: {}", msg);
         self.control_socket.send(&msg, 0).unwrap();
         let mut msg = zmq::Message::new();
         self.control_socket.recv(&mut msg, 0).unwrap();
@@ -120,7 +123,7 @@ impl Objects
     pub fn addObj(&self, mass: f32, CS: f32, pos: Array1<f32>, vel: Array1<f32>)
     {
         let mut command = String::with_capacity(60);
-        command.push_str("w:");
+        command.push_str("a:");
         command.push_str(&mass.to_string());
         command.push(',');
         command.push_str(&CS.to_string());

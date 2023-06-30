@@ -26,8 +26,8 @@ fn main() {
         }
         drop(drone);
         let obj = _objects.lock().unwrap();
-        println!("{}",obj._time.lock().unwrap().to_string());
-
+        println!("{} -- {:?}",obj._time.lock().unwrap().to_string(), obj.states.lock().unwrap());
+        drop(obj);
         thread::sleep(time::Duration::from_millis(3000));
     }
 }

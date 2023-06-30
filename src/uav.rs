@@ -232,8 +232,6 @@ impl UAV
         let objects = self.objects_arc.lock().unwrap();
         objects.addObj(*mass, *CS, pos, vel);
         drop(objects);
-
-        println!("Obj is heading: {}",rep);
     }
 
 }
