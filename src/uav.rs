@@ -1,6 +1,6 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
 use ndarray::{Array1,arr1};
-
+use crate::objects::{Objects};
 
 pub struct DroneState
 {
@@ -46,6 +46,9 @@ impl ToString for DroneState {
 pub struct UAV
 {
     name: String,
+    state_arc: Arc<Mutex<DroneState>>,
+    objects_arc: Arc<Mutex<Objects>>,  
+
     simulation: Child,
     controller: Child,
     steer_socket: zmq::Socket,
@@ -55,10 +58,14 @@ pub struct UAV
 
 impl UAV
 {
-    pub fn new(_ctx: &mut zmq::Context, name: &str, state: Arc<Mutex<DroneState>>) -> Self {
+    pub fn new(_ctx: &mut zmq::Context, name: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
         let mut uav = UAV 
         {
             name: name.to_string(),
+
+            state_arc: state.clone(),
+
+            objects_arc: objects,
 
             simulation: Command::new("../UAV_physics_engine/build/uav")
             .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
@@ -161,6 +168,7 @@ impl UAV
                 state.pos = pos;
                 state.vel = vel;
                 state.om = om;
+                drop(state);
                 thread::sleep(time::Duration::from_millis(10));
             }
         }));
@@ -193,22 +201,37 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
-    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut r: Option<[f32;3]>)
+    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>)
     {
+        //9mm bullet
+        let mass = mass.get_or_insert(0.008);
+        let speed = speed.get_or_insert(350.0);
+        let CS = CS.get_or_insert(0.00001876708);
+        let r = r.get_or_insert([0.0,0.0,0.1]);
+
         let mut command = String::with_capacity(30);
         command.push_str("d:");
-        command.push_str(&mass.get_or_insert(0.03).to_string());
+        command.push_str(&mass.to_string());
         command.push(',');
-        command.push_str(&speed.get_or_insert(150.0).to_string());
+        command.push_str(&speed.to_string());
         command.push(',');
-        let r = r.get_or_insert([0.0,0.0,0.1]);
         command.push_str(&r[0].to_string());
         command.push(',');
         command.push_str(&r[1].to_string());
         command.push(',');
         command.push_str(&r[2].to_string());
         let rep = self._sendControlMsg(&command);
-        println!("Obj is heading: {}",rep);
+        let mut vel = arr1(&[0.0,0.0,0.0]);
+        for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
+        {
+            vel[i] = elem.parse::<f32>().unwrap();
+        }
+        let state = self.state_arc.lock().unwrap();
+        let pos = state.pos.clone();
+        drop(state);
+        let objects = self.objects_arc.lock().unwrap();
+        objects.addObj(*mass, *CS, pos, vel);
+        drop(objects);
     }
 
 }

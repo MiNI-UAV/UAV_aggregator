@@ -1,7 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc}, time};
 use ndarray::{Array1,arr1};
 
-use crate::drones::Drones;
+use crate::{drones::Drones, objects::{Objects}};
 
 
 pub struct Wind
@@ -11,8 +11,8 @@ pub struct Wind
 
 impl Wind
 {
-    pub fn new(drones: Arc<Mutex<Drones>>) -> Self
-    {
+    pub fn new(drones: Arc<Mutex<Drones>>,objects: Arc<Mutex<Objects>>) -> Self
+    {   
         let wind_reqester: JoinHandle<()> = thread::spawn(move ||
         {
             loop {
@@ -20,7 +20,7 @@ impl Wind
                 let pos = drones_lck.getPositions();
                 drop(drones_lck);
                 let wind: Vec<Array1<f32>> = pos.iter().map(|p| Wind::calcWind(p)).collect();
-                thread::sleep(time::Duration::from_millis(100));
+                thread::sleep(time::Duration::from_millis(50));
                 let drones_lck = drones.lock().unwrap();
                 for (i,w) in wind.iter().enumerate()
                 {
@@ -30,7 +30,20 @@ impl Wind
                     }
                 }
                 drop(drones_lck);
-                thread::sleep(time::Duration::from_millis(100));
+                thread::sleep(time::Duration::from_millis(50));
+                let objects_lck = objects.lock().unwrap();
+                let pos = objects_lck.getPositions();
+                drop(objects_lck);
+                let wind: Vec<(usize,Array1<f32>)> = pos.iter().map(|p| (p.0,Wind::calcWind(&p.1))).collect();
+                if wind.is_empty()
+                {
+                    continue;
+                }
+                thread::sleep(time::Duration::from_millis(50));
+                let objects_lck = objects.lock().unwrap();
+                objects_lck.updateWind(wind);
+                drop(objects_lck);
+                thread::sleep(time::Duration::from_millis(50));
             }
         });
         Wind { wind_reqester: Some(wind_reqester) }
