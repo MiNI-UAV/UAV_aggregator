@@ -1,6 +1,7 @@
 use std::{sync::{Arc, Mutex}, thread::{JoinHandle, self}, time};
 use ndarray::Array1;
 use crate::uav::{UAV,DroneState};
+use crate::objects::Objects;
 
 pub struct Drones
 {
@@ -8,12 +9,13 @@ pub struct Drones
     ctx: zmq::Context,
     pub drones: Vec<UAV>,
     pub states: Arc<Mutex<Vec<Arc<Mutex<DroneState>>>>>,
+    objects: Arc<Mutex<Objects>>,
     _state_publisher: JoinHandle<()>
 }
 
 impl Drones
 {
-    pub fn new(_ctx: zmq::Context) -> Self {
+    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
         let states = Arc::new(Mutex::new(Vec::<Arc<Mutex<DroneState>>>::new()));
         let state_arc = states.clone();
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
@@ -38,14 +40,14 @@ impl Drones
                 thread::sleep(time::Duration::from_millis(15));
             }
         });
-        Drones {ctx: _ctx, drones: Vec::new(), states: states, _state_publisher: publisher}
+        Drones {ctx: _ctx, drones: Vec::new(), states: states, objects: objects, _state_publisher: publisher}
     }
 
     pub fn startUAV(&mut self, name: &str) -> (usize,String)
     {
         let state = Arc::new(Mutex::new(DroneState::new()));
         self.states.lock().unwrap().push(state.clone());
-        self.drones.push(UAV::new(&mut self.ctx, name,state));
+        self.drones.push(UAV::new(&mut self.ctx, name,state,self.objects.clone()));
         (self.drones.len()-1,format!("ipc:///tmp/{}/steer", name))
     }
 

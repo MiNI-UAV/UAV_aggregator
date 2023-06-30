@@ -4,9 +4,9 @@ use ndarray::{Array1,arr1};
 
 pub struct ObjectState
 {
-    id: usize,
-    pos: Array1<f32>,
-    vel: Array1<f32>,
+    pub id: usize,
+    pub pos: Array1<f32>,
+    pub vel: Array1<f32>,
 }
 
 impl ObjectState {
@@ -30,11 +30,6 @@ impl ObjectState {
         }
         ObjectState {id: id, pos: pos, vel: vel}
     }
-
-    pub fn getPos(&self) -> Array1<f32>
-    {
-        self.pos.clone()
-    }
 }
 
 pub struct Objects
@@ -43,6 +38,7 @@ pub struct Objects
     pub _time: Arc<Mutex<f32>>,
     pub states: Arc<Mutex<Vec<ObjectState>>>,
 
+    control_socket: zmq::Socket,
     _drop_physic: Child,
     _state_proxy: JoinHandle<()>,
     _state_cupturer: JoinHandle<()>
@@ -63,7 +59,6 @@ impl Objects
             let mut capture_socket = ctx.socket(zmq::PAIR).expect("Capture socket error");
             capture_socket.bind("inproc://obj_state").unwrap();
             let mut listener_socket = ctx.socket(zmq::XSUB).expect("Sub socket error");
-            listener_socket.set_subscribe(b"").unwrap();
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
             publisher_socket.bind("tcp://127.0.0.1:9100").expect("Bind error tcp 9100");
@@ -82,18 +77,25 @@ impl Objects
             let obj_info = obj_states_msg.as_str().unwrap().to_string();
             Self::parseInfo(time_access,states_access,obj_info);
         });
-        Objects {_ctx: _ctx,_time: time,states: states,_drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
+        let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
+        control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
+        Objects {_ctx: _ctx,_time: time,states: states, control_socket: control_socket, _drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
     }
 
     fn parseInfo(time: Arc<Mutex<f32>>, states: Arc<Mutex<Vec<ObjectState>>>, info: String)
     {
+        if info.len() < 2 {
+            return;
+        }
         let mut newStates = Vec::new();
+        println!("Message: {}", info);
         let list = info.split(";");
         for (i,elem) in list.into_iter().enumerate()
         {
             if i == 0
             {
                 let mut time_lck = time.lock().unwrap() ;
+                println!("Message: {}", elem);
                 *time_lck = elem.parse::<f32>().unwrap();
                 drop(time_lck);
                 continue;
@@ -105,10 +107,80 @@ impl Objects
         drop(state_lck);
     }
 
+    fn _sendControlMsg(&self, msg: &str) -> String
+    {
+        self.control_socket.send(&msg, 0).unwrap();
+        let mut msg = zmq::Message::new();
+        self.control_socket.recv(&mut msg, 0).unwrap();
+        let rep = msg.as_str().unwrap();
+        assert!(rep.contains("ok"));
+        rep.to_string()
+    }
+
+    pub fn addObj(&self, mass: f32, CS: f32, pos: Array1<f32>, vel: Array1<f32>)
+    {
+        let mut command = String::with_capacity(60);
+        command.push_str("w:");
+        command.push_str(&mass.to_string());
+        command.push(',');
+        command.push_str(&CS.to_string());
+        command.push(',');
+        command.push_str(&pos[0].to_string());
+        command.push(',');
+        command.push_str(&pos[1].to_string());
+        command.push(',');
+        command.push_str(&pos[2].to_string());
+        command.push(',');
+        command.push_str(&vel[0].to_string());
+        command.push(',');
+        command.push_str(&vel[1].to_string());
+        command.push(',');
+        command.push_str(&vel[2].to_string());
+        self._sendControlMsg(&command);
+    }
+
+    pub fn removeObj(&self, id: usize)
+    {
+        self._sendControlMsg(&format!("r:{}",id.to_string()));
+    }
+
+    pub fn updateWind(&self, wind: Vec<(usize,Array1<f32>)>)
+    {
+        let mut command = String::with_capacity(30*wind.len());
+        command.push_str("w:");
+        for (id,wind_vec) in wind {
+            command.push_str(&id.to_string());
+            command.push(',');
+            command.push_str(&wind_vec[0].to_string());
+            command.push(',');
+            command.push_str(&wind_vec[1].to_string());
+            command.push(',');
+            command.push_str(&wind_vec[2].to_string());
+            command.push(';');
+        }
+        self._sendControlMsg(&command);
+    }
+
+    pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
+    {
+        let mut pos = Vec::<(usize,Array1<f32>)>::new();
+        let state = self.states.lock().unwrap();
+        if !state.is_empty()
+        {
+            for elem in state.iter()  {
+                pos.push((elem.id,elem.pos.clone()));
+            }
+        }
+        drop(state);
+        pos
+    }
+
 }
 
 impl Drop for Objects {
     fn drop(&mut self) {
+        println!("Dropping objects instance");
+        self._sendControlMsg("s");
         self._drop_physic.wait().expect("drop wait");
     } 
 }
