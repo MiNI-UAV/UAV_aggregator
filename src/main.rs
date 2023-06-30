@@ -18,16 +18,16 @@ fn main() {
     let _colision_detector = collision::CollisionDetector::new(_drones.clone());
 
     loop {
-        let drone = _drones.lock().unwrap();
-        if let Some(d) = drone.drones.get(0)
-        {
-            d.dropOrShot(None,None,None,None);
+        // let drone = _drones.lock().unwrap();
+        // if let Some(d) = drone.drones.get(0)
+        // {
+        //     d.dropOrShot(None,None,None,None);
 
-        }
-        drop(drone);
-        let obj = _objects.lock().unwrap();
-        println!("{} -- {:?}",obj._time.lock().unwrap().to_string(), obj.states.lock().unwrap());
-        drop(obj);
+        // }
+        // drop(drone);
+        // let obj = _objects.lock().unwrap();
+        // println!("{} -- {:?}",obj._time.lock().unwrap().to_string(), obj.states.lock().unwrap());
+        // drop(obj);
         thread::sleep(time::Duration::from_millis(3000));
     }
 }
