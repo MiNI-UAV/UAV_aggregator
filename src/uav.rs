@@ -179,11 +179,11 @@ impl UAV
         self.steer_socket.send(&msg, 0).unwrap();
     }
 
-    fn _sendControlMsg(&self, msg: &str) -> String
+    fn _sendControlMsg(&self, msg_str: &str) -> String
     {
-        self.control_socket.send(&msg, 0).unwrap();
+        self.control_socket.send(&msg_str, 0).unwrap();
         let mut msg = zmq::Message::new();
-        self.control_socket.recv(&mut msg, 0).unwrap();
+        self.control_socket.recv(&mut msg, 0).unwrap_or_else(|_| println!("Error sending {}", msg_str));
         let rep = msg.as_str().unwrap();
         assert!(rep.contains("ok"));
         rep.to_string()
@@ -238,6 +238,8 @@ impl UAV
 
 impl Drop for UAV {
     fn drop(&mut self) {
+        println!("Dropping drone: {}", self.name);
+        self._sendSteeringMsg("c:exit");
         self.simulation.wait().expect("sim wait");
         self.controller.wait().expect("controller wait");
         println!("Drone eliminated: {}!", self.name); 

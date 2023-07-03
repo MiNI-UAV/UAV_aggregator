@@ -1,21 +1,23 @@
-use std::{sync::{Arc, Mutex}, thread::{JoinHandle, self}, time};
+use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
 use ndarray::Array1;
 use crate::uav::{UAV,DroneState};
 use crate::objects::Objects;
 
 pub struct Drones
 {
-
     ctx: zmq::Context,
+    running: Arc<AtomicBool>,
     pub drones: Vec<UAV>,
     pub states: Arc<Mutex<Vec<Arc<Mutex<DroneState>>>>>,
     objects: Arc<Mutex<Objects>>,
-    _state_publisher: JoinHandle<()>
+    _state_publisher: Option<thread::JoinHandle<()>>
 }
 
 impl Drones
 {
     pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
+        let running = Arc::new(AtomicBool::new(true));
+        let r = running.clone();
         let states = Arc::new(Mutex::new(Vec::<Arc<Mutex<DroneState>>>::new()));
         let state_arc = states.clone();
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
@@ -23,7 +25,7 @@ impl Drones
         {
             publisher_socket.bind("tcp://127.0.0.1:9090").expect("Bind error tcp 9090");
             println!("State publisher started on TCP: {}", 9090);
-            loop {
+            while r.load(Ordering::SeqCst) {
                 let state = state_arc.lock().unwrap();
                 if !state.is_empty()
                 {
@@ -40,7 +42,7 @@ impl Drones
                 thread::sleep(time::Duration::from_millis(15));
             }
         });
-        Drones {ctx: _ctx, drones: Vec::new(), states: states, objects: objects, _state_publisher: publisher}
+        Drones {ctx: _ctx, running: running, drones: Vec::new(), states: states, objects: objects, _state_publisher: Some(publisher)}
     }
 
     pub fn startUAV(&mut self, name: &str) -> (usize,String)
@@ -49,6 +51,15 @@ impl Drones
         self.states.lock().unwrap().push(state.clone());
         self.drones.push(UAV::new(&mut self.ctx, name,state,self.objects.clone()));
         (self.drones.len()-1,format!("ipc:///tmp/{}/steer", name))
+    }
+
+    pub fn removeUAV(&mut self, index: usize)
+    {
+        assert!(index < self.drones.len());
+        self.drones.remove(index);
+        let mut state = self.states.lock().unwrap();
+        state.remove(index);
+        drop(state);
     }
 
     pub fn printState(&self)
@@ -77,3 +88,15 @@ impl Drones
 
 }
 
+impl Drop for Drones{
+    fn drop(&mut self) {
+        println!("Dropping drones instance");
+        self.running.store(false, Ordering::SeqCst);
+        self._state_publisher.take().unwrap().join().expect("Join error");
+        while !self.drones.is_empty()
+        {
+            self.removeUAV(0);
+        }
+        println!("Drones instance dropped");
+    }
+}

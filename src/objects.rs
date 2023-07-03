@@ -1,4 +1,4 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex}, process::{Command, Stdio, Child}};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}};
 use ndarray::{Array1,arr1};
 
 
@@ -38,6 +38,7 @@ pub struct Objects
     _ctx: zmq::Context,
     pub _time: Arc<Mutex<f32>>,
     pub states: Arc<Mutex<Vec<ObjectState>>>,
+    running: Arc<AtomicBool>,
 
     control_socket: zmq::Socket,
     _drop_physic: Child,
@@ -52,6 +53,8 @@ impl Objects
         .stdout(Stdio::null())
         .spawn()
         .expect("failed to execute drop physic process");
+        let running = Arc::new(AtomicBool::new(true));
+        let r = running.clone();
         let states = Arc::new(Mutex::new(Vec::new()));
         let time = Arc::new(Mutex::new(0.0));
         let ctx = _ctx.clone();
@@ -70,19 +73,23 @@ impl Objects
         let states_access = states.clone();
         let capture: JoinHandle<()> = thread::spawn(move ||
         {
-            loop {
-                let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
-                capture_socket.set_subscribe(b"").unwrap();
-                capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
+            let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
+            capture_socket.set_subscribe(b"").unwrap();
+            capture_socket.set_rcvtimeo(1000).unwrap();
+            capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
+            while r.load(Ordering::SeqCst) {
                 let mut obj_states_msg =  zmq::Message::new();
-                capture_socket.recv(&mut obj_states_msg, 0).unwrap();
+                if let Err(_) = capture_socket.recv(&mut obj_states_msg, 0)
+                {
+                    continue;
+                }
                 let obj_info = obj_states_msg.as_str().unwrap().to_string();
                 Self::parseInfo(&time_access,&states_access,obj_info);
             }
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
-        Objects {_ctx: _ctx,_time: time,states: states, control_socket: control_socket, _drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
+        Objects {_ctx: _ctx,_time: time,states: states, running: running, control_socket: control_socket, _drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
     }
 
     fn parseInfo(time: &Arc<Mutex<f32>>, states: &Arc<Mutex<Vec<ObjectState>>>, info: String)
@@ -111,7 +118,6 @@ impl Objects
 
     fn _sendControlMsg(&self, msg: &str) -> String
     {
-        println!("msg: {}", msg);
         self.control_socket.send(&msg, 0).unwrap();
         let mut msg = zmq::Message::new();
         self.control_socket.recv(&mut msg, 0).unwrap();
@@ -183,7 +189,11 @@ impl Objects
 impl Drop for Objects {
     fn drop(&mut self) {
         println!("Dropping objects instance");
-        self._sendControlMsg("s");
-        self._drop_physic.wait().expect("drop wait");
+        self.running.store(false, Ordering::SeqCst);
+        while let Err(_) = self._drop_physic.try_wait()
+        {
+            self._sendControlMsg("s");
+        }
+        println!("Objects instance dropped")
     } 
 }

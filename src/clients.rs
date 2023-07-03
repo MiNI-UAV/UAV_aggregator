@@ -1,26 +1,35 @@
-use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc}, collections::HashSet};
+use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet};
 
 use crate::drones::Drones;
 
 pub struct Clients
 {
+    running: Arc<AtomicBool>,
+    _proxies: Arc<Mutex<Vec<Option<thread::JoinHandle<()>>>>>,
     _replyer: Option<thread::JoinHandle<()>>
 }
 
 impl Clients
 {
     pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>) -> Self {
+        let running = Arc::new(AtomicBool::new(true));
+        let r = running.clone();
         let mut next_port = 10000;
         let replyer_socket = _ctx.socket(zmq::REP).expect("REP socket error");
         let mut taken_name =  HashSet::<String>::new();
-        let mut proxies = Vec::<JoinHandle<()>>::new();
+        let proxies = Arc::new(Mutex::new(Vec::<Option::<JoinHandle<()>>>::new()));
+        let p = proxies.clone();
         let replyer: JoinHandle<()> = thread::spawn(move ||
         {
+            replyer_socket.set_rcvtimeo(1000).unwrap();
             replyer_socket.bind("tcp://127.0.0.1:9000").expect("Bind error tcp 9000");
             println!("Replyer started on TCP: {}", 9000);
-            loop {
+            while r.load(Ordering::SeqCst) {
                 let mut request =  zmq::Message::new();
-                replyer_socket.recv(&mut request, 0).unwrap();
+                if let Err(_) = replyer_socket.recv(&mut request, 0)
+                {
+                    continue;
+                }
                 let mut drone_name = request.as_str().unwrap().to_string();
                 if drone_name.is_empty(){
                     let mut reply = String::new();
@@ -43,13 +52,16 @@ impl Clients
                 steer_pair_socket.bind(&address).unwrap();
                 let steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
                 steer_xpub_socket.connect(&uav_address).unwrap();
-                proxies.push(
+
+                let mut proxy = p.lock().unwrap();
+                proxy.push(Some(
                     thread::spawn(move ||
                     {
                         zmq::proxy(&steer_pair_socket, &steer_xpub_socket).expect("Proxy err");
                         println!("Closing proxy");
-                    })
-                );       
+                    }))
+                );
+                drop(proxy);       
                 println!("Ready to connect client on TCP: {}", next_port);
                 let mut reply = String::new();
                 reply.push_str(&drone_no.to_string());
@@ -59,12 +71,25 @@ impl Clients
                 next_port = next_port + 1;
             }
         });
-        Clients{_replyer: Some(replyer)}
+        Clients{running: running, _proxies: proxies, _replyer: Some(replyer)}
     }
 }
 
 impl Drop for Clients{
     fn drop(&mut self) {
+        println!("Dropping clients instance");
+        self.running.store(false, Ordering::SeqCst);
         self._replyer.take().unwrap().join().expect("Join error");
+        println!("Main client thread dropped");
+        let mut proxy = self._proxies.lock().unwrap();
+        while let Some(handler) = proxy.pop()
+        {
+            if let Some(h) = handler
+            {
+                h.join().expect("Proxy joining error");
+            }
+        }
+        drop(proxy); 
+        println!("Clients instance dropped");
     }
 }
