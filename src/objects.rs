@@ -1,4 +1,4 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time};
 use ndarray::{Array1,arr1};
 
 
@@ -194,9 +194,19 @@ impl Drop for Objects {
     fn drop(&mut self) {
         println!("Dropping objects instance");
         self.running.store(false, Ordering::SeqCst);
-        while let Err(_) = self._drop_physic.try_wait()
-        {
-            self._sendControlMsg("s");
+        loop {
+            match self._drop_physic.try_wait() {
+                Err(E) => println!("{}", E),
+                Ok(None) =>
+                {
+                    self._sendControlMsg("s");
+                    thread::sleep(time::Duration::from_millis(10));
+                }
+                Ok(_) =>
+                {
+                    break;
+                }
+            }
         }
         self._state_proxy.take().unwrap().join().expect("Join error");
         self._state_cupturer.take().unwrap().join().expect("Join error");

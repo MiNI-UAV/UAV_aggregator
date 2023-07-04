@@ -2,6 +2,8 @@
 
 use std::{time, thread, sync::{Mutex, Arc}};
 use std::sync::atomic::{AtomicBool, Ordering};
+use device_query::{DeviceEvents, DeviceState};
+
 
 
 pub mod clients;
@@ -19,9 +21,14 @@ fn main() {
     let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
     stopSocket.bind("inproc://stop").unwrap();
 
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
+    let device_state = DeviceState::new();
+
+    let _guardQ = device_state.on_key_down(move |key| {
+        if key.eq(&device_query::Keycode::Q)
+        {
+            r.store(false, Ordering::SeqCst);
+        }
+     });
 
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
