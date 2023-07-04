@@ -42,8 +42,8 @@ pub struct Objects
 
     control_socket: zmq::Socket,
     _drop_physic: Child,
-    _state_proxy: JoinHandle<()>,
-    _state_cupturer: JoinHandle<()>
+    _state_proxy: Option<JoinHandle<()>>,
+    _state_cupturer: Option<JoinHandle<()>>
 }
 
 impl Objects
@@ -61,12 +61,15 @@ impl Objects
         let proxy: JoinHandle<()> = thread::spawn(move ||
         {
             let mut listener_socket = ctx.socket(zmq::XSUB).expect("Sub socket error");
-            //listener_socket.set_subscribe(b"").unwrap();
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
             publisher_socket.bind("tcp://127.0.0.1:9100").expect("Bind error tcp 9100");
             println!("Object state proxy started on TCP: {}", 9100);
-            zmq::proxy(&mut listener_socket,&mut publisher_socket).unwrap();
+            let mut stop_sub_socket = ctx.socket(zmq::SUB).unwrap();
+            stop_sub_socket.set_subscribe(b"").unwrap();
+            stop_sub_socket.connect("inproc://stop").unwrap();
+            zmq::proxy_steerable(&mut listener_socket,&mut publisher_socket, &mut stop_sub_socket).unwrap();
+            println!("Closing objects proxy");
         });
         let ctx = _ctx.clone();
         let time_access = time.clone();
@@ -89,7 +92,8 @@ impl Objects
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
-        Objects {_ctx: _ctx,_time: time,states: states, running: running, control_socket: control_socket, _drop_physic: drop_physic, _state_proxy: proxy, _state_cupturer: capture}
+        Objects {_ctx: _ctx,_time: time,states: states, running: running, control_socket: control_socket,
+             _drop_physic: drop_physic, _state_proxy: Some(proxy), _state_cupturer: Some(capture)}
     }
 
     fn parseInfo(time: &Arc<Mutex<f32>>, states: &Arc<Mutex<Vec<ObjectState>>>, info: String)
@@ -194,6 +198,8 @@ impl Drop for Objects {
         {
             self._sendControlMsg("s");
         }
+        self._state_proxy.take().unwrap().join().expect("Join error");
+        self._state_cupturer.take().unwrap().join().expect("Join error");
         println!("Objects instance dropped")
     } 
 }

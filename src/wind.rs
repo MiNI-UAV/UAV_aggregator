@@ -24,7 +24,6 @@ impl Wind
                 drop(drones_lck);
                 let wind: Vec<Array1<f32>> = pos.iter().map(|p| Wind::calcWind(p)).collect();
                 thread::sleep(time::Duration::from_millis(50));
-                println!("A");
                 let drones_lck = drones.lock().unwrap();
                 for (i,w) in wind.iter().enumerate()
                 {
@@ -35,7 +34,6 @@ impl Wind
                 }
                 drop(drones_lck);
                 thread::sleep(time::Duration::from_millis(50));
-                println!("B");
                 let objects_lck = objects.lock().unwrap();
                 let pos = objects_lck.getPositions();
                 drop(objects_lck);
@@ -45,12 +43,10 @@ impl Wind
                     continue;
                 }
                 thread::sleep(time::Duration::from_millis(50));
-                println!("C");
                 let objects_lck = objects.lock().unwrap();
                 objects_lck.updateWind(wind);
                 drop(objects_lck);
                 thread::sleep(time::Duration::from_millis(50));
-                println!("D");
             }
         });
         Wind {running: running, wind_reqester: Some(wind_reqester) }

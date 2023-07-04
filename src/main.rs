@@ -12,14 +12,17 @@ pub mod collision;
 pub mod objects;
 
 fn main() {
+    let ctx = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
+
+    let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
+    stopSocket.bind("inproc://stop").unwrap();
 
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
     }).expect("Error setting Ctrl-C handler");
 
-    let ctx = zmq::Context::new();
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone()); 
@@ -41,4 +44,15 @@ fn main() {
         thread::sleep(time::Duration::from_millis(100));
     }
     println!("Bye!");
+    stopSocket.send("TERMINATE", 0).unwrap();
+    let mut drones_lck = _drones.lock().unwrap();
+    drones_lck.removeAllUAV();
+    println!("All drone killed!");
+    drop(drones_lck);
+    drop(_colision_detector);
+    drop(_wind);
+    drop(_clients);
+    drop(_drones);
+    drop(_objects);
+    drop(ctx);
 }

@@ -62,6 +62,13 @@ impl Drones
         drop(state);
     }
 
+    pub fn removeAllUAV(&mut self)
+    {
+        while !self.drones.is_empty() {
+            self.removeUAV(0);
+        }
+    }
+
     pub fn printState(&self)
     {
         for (i, item) in self.states.lock().unwrap().iter().enumerate() {

@@ -47,21 +47,25 @@ impl Clients
                 let mut drones = drones.lock().unwrap();
                 let (drone_no,uav_address) = drones.startUAV(&drone_name);
                 println!("Started new drone with name: {}", drone_name);
-                let steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
+                let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
                 let address = format!("tcp://127.0.0.1:{}", next_port);
                 steer_pair_socket.bind(&address).unwrap();
-                let steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
+                let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
                 steer_xpub_socket.connect(&uav_address).unwrap();
+                let mut stop_sub_socket = _ctx.socket(zmq::SUB).unwrap();
+                stop_sub_socket.set_subscribe(b"").unwrap();
+                stop_sub_socket.connect("inproc://stop").unwrap();
 
                 let mut proxy = p.lock().unwrap();
                 proxy.push(Some(
                     thread::spawn(move ||
                     {
-                        zmq::proxy(&steer_pair_socket, &steer_xpub_socket).expect("Proxy err");
-                        println!("Closing proxy");
+                        zmq::proxy_steerable(&mut steer_pair_socket, &mut steer_xpub_socket,&mut stop_sub_socket).expect("Proxy err");
+                        println!("Closing client proxy");
+
                     }))
                 );
-                drop(proxy);       
+                drop(proxy);
                 println!("Ready to connect client on TCP: {}", next_port);
                 let mut reply = String::new();
                 reply.push_str(&drone_no.to_string());
