@@ -72,8 +72,6 @@ impl Clients
                 println!("Ready to connect steer client on TCP: {}", next_port);
 
                 let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
-                let address = format!("tcp://127.0.0.1:{}", next_port+1000);
-                control_pair_socket.bind(&address).unwrap();
                 let mut control = c.lock().unwrap();
                 let r2 = r.clone();
                 let d2 = drones.clone();
