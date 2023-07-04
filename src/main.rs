@@ -1,45 +1,65 @@
 #![allow(non_snake_case)]
 
-use std::process::Command;
+use std::{time, thread, sync::{Mutex, Arc}};
+use std::sync::atomic::{AtomicBool, Ordering};
+use device_query::{DeviceEvents, DeviceState};
+
+
+
+pub mod clients;
+pub mod drones;
+pub mod uav;
+pub mod wind;
+pub mod collision;
+pub mod objects;
 
 fn main() {
-    print!("Simulation:");
-    let mut simulation = Command::new("../UAV_physics_engine/build/uav")
-                     .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
-                     .arg("-n").arg("test1")
-                     .spawn()
-                     .expect("failed to execute simulation process");
+    let ctx = zmq::Context::new();
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
 
-    print!("Controller:");
-    let mut controller = Command::new("../UAV_controller/build/controller")
-                     .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
-                     .arg("-n").arg("test1")
-                     .spawn()
-                     .expect("failed to execute controller process");
+    let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
+    stopSocket.bind("inproc://stop").unwrap();
 
-    
-    let mut visualization = Command::new("gradle")
-                     .arg("-p")
-                     .arg("../UAV_visualization")
-                     .arg("run")
-                     .spawn()
-                     .expect("failed to execute visualization process");
+    let device_state = DeviceState::new();
 
-    
+    let _guardQ = device_state.on_key_down(move |key| {
+        if key.eq(&device_query::Keycode::Q)
+        {
+            r.store(false, Ordering::SeqCst);
+        }
+     });
 
+    let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
+    let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
+    let _clients = clients::Clients::new(ctx.clone(),_drones.clone()); 
+    let _wind = wind::Wind::new(_drones.clone(),_objects.clone());
+    let _colision_detector = collision::CollisionDetector::new(_drones.clone());
 
-    let ecode = simulation.wait()
-                     .expect("failed to wait on child");
-    
-    assert!(ecode.success());
-
-    let ecode = controller.wait()
-                     .expect("failed to wait on child");
-    
-    assert!(ecode.success());
-
-    let ecode = visualization.wait()
-                     .expect("failed to wait on child");
-    
-    assert!(ecode.success());
+    while running.load(Ordering::SeqCst) {
+        // let drone = _drones.lock().unwrap();
+        // if let Some(d) = drone.drones.get(0)
+        // {
+        //     for _ in 0..2 {
+        //         d.dropOrShot(None,None,None,Some([0.0,0.1,0.0]));
+        //         thread::sleep(time::Duration::from_millis(300));
+        //         d.dropOrShot(None,None,None,Some([0.0,-0.1,0.0]));
+        //         thread::sleep(time::Duration::from_millis(300));
+        //     }        
+        // }
+        // drop(drone);    
+        thread::sleep(time::Duration::from_millis(100));
+    }
+    println!("Bye!");
+    stopSocket.send("TERMINATE", 0).unwrap();
+    let mut drones_lck = _drones.lock().unwrap();
+    drones_lck.removeAllUAV();
+    println!("All drone killed!");
+    drop(drones_lck);
+    drop(_colision_detector);
+    drop(_wind);
+    drop(_clients);
+    drop(_drones);
+    drop(_objects);
+    drop(ctx);
 }
