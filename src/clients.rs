@@ -25,7 +25,7 @@ impl Clients
         let replyer: JoinHandle<()> = thread::spawn(move ||
         {
             replyer_socket.set_rcvtimeo(1000).unwrap();
-            replyer_socket.bind("tcp://127.0.0.1:9000").expect("Bind error tcp 9000");
+            replyer_socket.bind("tcp://*:9000").expect("Bind error tcp 9000");
             println!("Replyer started on TCP: {}", 9000);
             while r.load(Ordering::SeqCst) {
                 let mut request =  zmq::Message::new();
@@ -52,7 +52,7 @@ impl Clients
                 drop(drones_lck);
                 println!("Started new drone with name: {}", drone_name);
                 let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
-                let address = format!("tcp://127.0.0.1:{}", next_port);
+                let address = format!("tcp://*:{}", next_port);
                 steer_pair_socket.bind(&address).unwrap();
                 let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
                 steer_xpub_socket.connect(&uav_address).unwrap();
@@ -79,7 +79,7 @@ impl Clients
                     thread::spawn(move ||
                     {
                         control_pair_socket.set_rcvtimeo(1000).unwrap();
-                        let address = format!("tcp://127.0.0.1:{}", next_port+1000);
+                        let address = format!("tcp://*:{}", next_port+1000);
                         control_pair_socket.bind(&address).unwrap();
                         while r2.load(Ordering::SeqCst) {
                             let mut request =  zmq::Message::new();
