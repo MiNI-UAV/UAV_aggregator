@@ -45,10 +45,11 @@ impl ToString for DroneState {
 
 pub struct UAV
 {
-    name: String,
-    state_arc: Arc<Mutex<DroneState>>,
-    objects_arc: Arc<Mutex<Objects>>,  
+    pub id: usize,
+    pub name: String,
+    pub state_arc: Arc<Mutex<DroneState>>,
 
+    objects_arc: Arc<Mutex<Objects>>,  
     simulation: Child,
     controller: Child,
     steer_socket: zmq::Socket,
@@ -58,9 +59,11 @@ pub struct UAV
 
 impl UAV
 {
-    pub fn new(_ctx: &mut zmq::Context, name: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
+    pub fn new(_ctx: &mut zmq::Context,id : usize , name: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
         let mut uav = UAV 
         {
+            id: id,
+
             name: name.to_string(),
 
             state_arc: state.clone(),

@@ -21,16 +21,16 @@ impl Wind
             while r.load(Ordering::SeqCst) {
                 let drones_lck = drones.lock().unwrap();
                 let pos = drones_lck.getPositions();
-                drop(drones_lck);
-                let wind: Vec<Array1<f32>> = pos.iter().map(|p| Wind::calcWind(p)).collect();
+                let wind: Vec<(usize,Array1<f32>)> = pos.iter().map(|p| (p.0, Wind::calcWind(&p.1))).collect();
                 thread::sleep(time::Duration::from_millis(50));
-                let drones_lck = drones.lock().unwrap();
-                for (i,w) in wind.iter().enumerate()
+                for (id,w) in wind.iter()
                 {
-                    if let Some(d) = drones_lck.drones.get(i)
+                    let d = drones_lck.drones.lock().unwrap();
+                    if let Some(drone) = d.iter().find(|drone| drone.id == *id)
                     {
-                        d.sendWind(w);
+                        drone.sendWind(w);
                     }
+
                 }
                 drop(drones_lck);
                 thread::sleep(time::Duration::from_millis(50));

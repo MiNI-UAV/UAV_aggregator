@@ -7,10 +7,10 @@ pub struct Drones
 {
     ctx: zmq::Context,
     running: Arc<AtomicBool>,
-    pub drones: Vec<UAV>,
-    pub states: Arc<Mutex<Vec<Arc<Mutex<DroneState>>>>>,
+    pub drones: Arc<Mutex<Vec<UAV>>>,
     objects: Arc<Mutex<Objects>>,
-    _state_publisher: Option<thread::JoinHandle<()>>
+    _state_publisher: Option<thread::JoinHandle<()>>,
+    nextID: usize
 }
 
 impl Drones
@@ -18,80 +18,83 @@ impl Drones
     pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
-        let states = Arc::new(Mutex::new(Vec::<Arc<Mutex<DroneState>>>::new()));
-        let state_arc = states.clone();
+        let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
+        let drones_arc = drones.clone();
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
             publisher_socket.bind("tcp://*:9090").expect("Bind error tcp 9090");
             println!("State publisher started on TCP: {}", 9090);
             while r.load(Ordering::SeqCst) {
-                let state = state_arc.lock().unwrap();
-                if !state.is_empty()
+                let drones = drones_arc.lock().unwrap();
+                if !drones.is_empty()
                 {
-                    let mut result = String::with_capacity(state.len()*300);
-                    for elem in state.iter()  {
-                        let drone = elem.lock().unwrap();
-                        result.push_str(&drone.to_string());
+                    let mut result = String::with_capacity(drones.len()*320);
+                    for elem in drones.iter()  {
+                        result.push_str(&elem.id.to_string());
+                        result.push(',');
+                        let state = elem.state_arc.lock().unwrap();
+                        result.push_str(&state.to_string());
+                        drop(state);
                         result.push(';');
                     }
                     publisher_socket.send(&result, 0).unwrap();
                     //println!("{}",result);
                 }
-                drop(state);
+                drop(drones);
                 thread::sleep(time::Duration::from_millis(15));
             }
         });
-        Drones {ctx: _ctx, running: running, drones: Vec::new(), states: states, objects: objects, _state_publisher: Some(publisher)}
+        Drones {ctx: _ctx, running: running, drones: drones, objects: objects, _state_publisher: Some(publisher), nextID: 0}
     }
 
     pub fn startUAV(&mut self, name: &str) -> (usize,String)
     {
         let state = Arc::new(Mutex::new(DroneState::new()));
-        self.states.lock().unwrap().push(state.clone());
-        self.drones.push(UAV::new(&mut self.ctx, name,state,self.objects.clone()));
-        (self.drones.len()-1,format!("ipc:///tmp/{}/steer", name))
+        let mut drone = self.drones.lock().unwrap();
+        let id = self.nextID;
+        self.nextID += 1;
+        drone.push(UAV::new(&mut self.ctx,id, name,state,self.objects.clone()));
+        drop(drone);
+        (id,format!("ipc:///tmp/{}/steer", name))
     }
 
-    pub fn removeUAV(&mut self, index: usize)
+    pub fn removeUAV(&mut self, id: usize)
     {
-        assert!(index < self.drones.len());
-        self.drones.remove(index);
-        let mut state = self.states.lock().unwrap();
-        state.remove(index);
-        drop(state);
+        let mut drone = self.drones.lock().unwrap();
+        drone.retain_mut(|d| d.id != id);
+        drop(drone);
     }
 
     pub fn removeAllUAV(&mut self)
     {
-        while !self.drones.is_empty() {
-            self.removeUAV(0);
-        }
+        let mut drone = self.drones.lock().unwrap();
+        drone.clear();
+        drop(drone);
     }
 
     pub fn printState(&self)
     {
-        for (i, item) in self.states.lock().unwrap().iter().enumerate() {
-            let state = item.lock();
-            println!("{}:{}",i,state.unwrap().to_string());
+        for (i, item) in self.drones.lock().unwrap().iter().enumerate() {
+            let state = item.state_arc.lock().unwrap();
+            println!("{}:{}",i,state.to_string());
         }
     }
 
-    pub fn getPositions(&self) -> Vec<Array1<f32>>
+    pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
     {
         let mut pos = Vec::new();
-        let state = self.states.lock().unwrap();
-        if !state.is_empty()
+        let drone = self.drones.lock().unwrap();
+        if !drone.is_empty()
         {
-            for elem in state.iter()  {
-                pos.push(elem.lock().unwrap().getPos());
+
+            for elem in drone.iter()  {
+                pos.push((elem.id,elem.state_arc.lock().unwrap().getPos()));
             }
         }
-        drop(state);
+        drop(drone);
         pos
     }
-
-
 
 }
 
@@ -100,10 +103,7 @@ impl Drop for Drones{
         println!("Dropping drones instance");
         self.running.store(false, Ordering::SeqCst);
         self._state_publisher.take().unwrap().join().expect("Join error");
-        while !self.drones.is_empty()
-        {
-            self.removeUAV(0);
-        }
+        self.removeAllUAV();
         println!("Drones instance dropped");
     }
 }
