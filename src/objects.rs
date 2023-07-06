@@ -63,7 +63,7 @@ impl Objects
             let mut listener_socket = ctx.socket(zmq::XSUB).expect("Sub socket error");
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
-            publisher_socket.bind("tcp://127.0.0.1:9100").expect("Bind error tcp 9100");
+            publisher_socket.bind("tcp://*:9100").expect("Bind error tcp 9100");
             println!("Object state proxy started on TCP: {}", 9100);
             let mut stop_sub_socket = ctx.socket(zmq::SUB).unwrap();
             stop_sub_socket.set_subscribe(b"").unwrap();

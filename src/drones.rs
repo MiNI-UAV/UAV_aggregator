@@ -23,7 +23,7 @@ impl Drones
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
-            publisher_socket.bind("tcp://127.0.0.1:9090").expect("Bind error tcp 9090");
+            publisher_socket.bind("tcp://*:9090").expect("Bind error tcp 9090");
             println!("State publisher started on TCP: {}", 9090);
             while r.load(Ordering::SeqCst) {
                 let state = state_arc.lock().unwrap();

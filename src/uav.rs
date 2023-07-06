@@ -204,9 +204,15 @@ impl UAV
     pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>)
     {
         //9mm bullet
-        let mass = mass.get_or_insert(0.008);
-        let speed = speed.get_or_insert(350.0);
-        let CS = CS.get_or_insert(0.00001876708);
+        // let mass = mass.get_or_insert(0.008);
+        // let speed = speed.get_or_insert(350.0);
+        // let CS = CS.get_or_insert(0.00001876708);
+        // let r = r.get_or_insert([0.0,0.0,0.1]);
+
+        //paintball
+        let mass = mass.get_or_insert(0.003);
+        let speed = speed.get_or_insert(90.0);
+        let CS = CS.get_or_insert(0.47*0.000126645);
         let r = r.get_or_insert([0.0,0.0,0.1]);
 
         let mut command = String::with_capacity(30);
