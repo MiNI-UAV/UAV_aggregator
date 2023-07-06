@@ -111,15 +111,17 @@ impl Clients
 
     fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones)
     {
-        match msg {
-            "shot" => {
-                if let Some(uav) = drones.drones.get(drone_no)
-                {
-                    uav.dropOrShot(None, None, None, None);
+        let d = drones.drones.lock().unwrap();
+        if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
+        {
+            match msg {
+                "shot" => {  
+                        drone.dropOrShot(None, None, None, None);
                 }
+                _ => {}
             }
-            _ => {}
         }
+        drop(d);
     }
 }
 
