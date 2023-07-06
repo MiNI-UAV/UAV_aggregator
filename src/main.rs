@@ -17,6 +17,7 @@ fn main() {
     let ctx = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
+    let r2 = running.clone();
 
     let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
     stopSocket.bind("inproc://stop").unwrap();
@@ -29,6 +30,10 @@ fn main() {
             r.store(false, Ordering::SeqCst);
         }
      });
+
+    ctrlc::set_handler(move || {
+        r2.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
 
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));

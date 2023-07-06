@@ -10,7 +10,6 @@ pub struct Drones
     pub drones: Arc<Mutex<Vec<UAV>>>,
     objects: Arc<Mutex<Objects>>,
     _state_publisher: Option<thread::JoinHandle<()>>,
-
     nextID: usize
 }
 
@@ -19,31 +18,34 @@ impl Drones
     pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
-        let states = Arc::new(Mutex::new(Vec::<Arc<Mutex<DroneState>>>::new()));
-        let state_arc = states.clone();
+        let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
+        let drones_arc = drones.clone();
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
             publisher_socket.bind("tcp://*:9090").expect("Bind error tcp 9090");
             println!("State publisher started on TCP: {}", 9090);
             while r.load(Ordering::SeqCst) {
-                let state = state_arc.lock().unwrap();
-                if !state.is_empty()
+                let drones = drones_arc.lock().unwrap();
+                if !drones.is_empty()
                 {
-                    let mut result = String::with_capacity(state.len()*320);
-                    for elem in state.iter()  {
-                        let drone = elem.lock().unwrap();
-                        result.push_str(&drone.to_string());
+                    let mut result = String::with_capacity(drones.len()*320);
+                    for elem in drones.iter()  {
+                        result.push_str(&elem.id.to_string());
+                        result.push(',');
+                        let state = elem.state_arc.lock().unwrap();
+                        result.push_str(&state.to_string());
+                        drop(state);
                         result.push(';');
                     }
                     publisher_socket.send(&result, 0).unwrap();
                     //println!("{}",result);
                 }
-                drop(state);
+                drop(drones);
                 thread::sleep(time::Duration::from_millis(15));
             }
         });
-        Drones {ctx: _ctx, running: running, drones: Arc::new(Mutex::new(Vec::new())), objects: objects, _state_publisher: Some(publisher), nextID: 0}
+        Drones {ctx: _ctx, running: running, drones: drones, objects: objects, _state_publisher: Some(publisher), nextID: 0}
     }
 
     pub fn startUAV(&mut self, name: &str) -> (usize,String)
@@ -52,7 +54,7 @@ impl Drones
         let mut drone = self.drones.lock().unwrap();
         let id = self.nextID;
         self.nextID += 1;
-        drone.push(UAV::new(&mut self.ctx,self.nextID, name,state,self.objects.clone()));
+        drone.push(UAV::new(&mut self.ctx,id, name,state,self.objects.clone()));
         drop(drone);
         (id,format!("ipc:///tmp/{}/steer", name))
     }
