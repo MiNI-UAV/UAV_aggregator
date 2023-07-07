@@ -134,7 +134,9 @@ impl Clients
                 "kill" => {  
                     d.retain_mut(|d| d.id != drone_no);
                 }
-                _ => {}
+                _ => {
+                    println!("Unknown command: {}", msg);
+                }
             }
         }
         drop(d);
