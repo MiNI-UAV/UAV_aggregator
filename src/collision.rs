@@ -1,10 +1,18 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 
-use ndarray::Array1;
+use ndarray::{Array1};
 
-use crate::drones::Drones;
+use crate::{drones::Drones, objects:: Objects};
 
-const MINIMAL_DISTANCE2: f32 = 0.5 * 0.5;
+const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
+
+//BOUNDING BOX
+const BOUNDMAXX: f32 = 200.0;
+const BOUNDMINX: f32 = -200.0;
+const BOUNDMAXY: f32 = 200.0;
+const BOUNDMINY: f32 = -200.0;
+const BOUNDMAXZ: f32 = 200.0;
+const BOUNDMINZ: f32 = -200.0;
 
 pub struct CollisionDetector
 {
@@ -14,22 +22,29 @@ pub struct CollisionDetector
 
 impl CollisionDetector
 {
-    pub fn new(_drones: Arc<Mutex<Drones>>) -> Self
+    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
+            // let upperLimit = arr1(&[BOUNDMAXX, BOUNDMAXY, BOUNDMAXZ]);
+            // let lowerLimit = arr1(&[BOUNDMINX,BOUNDMINY, BOUNDMINZ]);
             while r.load(Ordering::SeqCst) {
                 let drones_lck = _drones.lock().unwrap();
-                let pos = drones_lck.getPositions();
+                let drones_pos = drones_lck.getPositions();
                 drop(drones_lck);
+
+                let obj_lck = _objects.lock().unwrap();
+                let objs_pos = obj_lck.getPositions();
+                drop(obj_lck);
                 
-                for i in 0..pos.len() {
-                    for j in (i+1)..pos.len() {
-                        let obj1 = pos.get(i).unwrap();
-                        let obj2 = pos.get(j).unwrap();
+                //Colisions between drones
+                for i in 0..drones_pos.len() {
+                    for j in (i+1)..drones_pos.len() {
+                        let obj1 = drones_pos.get(i).unwrap();
+                        let obj2 = drones_pos.get(j).unwrap();
                         let dist: Array1<f32> = obj1.1.clone()-obj2.1.clone();
                         if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
                         {
@@ -37,6 +52,41 @@ impl CollisionDetector
                         }
                     }
                 }
+
+                //Colision between objects are negligible
+
+                //Drone-object colisions
+                for obj1 in drones_pos.iter() {
+                    for obj2 in objs_pos.iter() {
+                        let dist: Array1<f32> = obj1.1.clone()-obj2.1.clone();
+                        if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
+                        {
+                            println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
+                        }
+                    }
+                }
+
+                //Boundary box for objects
+                let mut objToKill = Vec::new();
+                for obj in objs_pos.iter() 
+                {
+                    if obj.1[0] > BOUNDMAXX || obj.1[1] > BOUNDMAXY || obj.1[2] > BOUNDMAXZ
+                        || obj.1[0] < BOUNDMINX || obj.1[1] < BOUNDMINY || obj.1[2] < BOUNDMINZ
+                    {
+                        //println!("Object {} is outside the boundary box", obj.0);
+                        objToKill.push(obj.0);
+                    }
+                }
+                if !objToKill.is_empty()
+                {
+                    let obj_lck = _objects.lock().unwrap();
+                    for id in objToKill {
+                        obj_lck.removeObj(id);
+                    }
+                    drop(obj_lck);
+                }
+
+
                 thread::sleep(time::Duration::from_millis(100));
             }
         });

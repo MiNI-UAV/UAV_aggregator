@@ -1,5 +1,5 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
-use ndarray::{Array1,arr1};
+use ndarray::{Array1,arr1,s};
 use crate::objects::{Objects};
 
 pub struct DroneState
@@ -15,9 +15,9 @@ impl DroneState {
         DroneState {time: -1.0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6]), om: Vec::new()}
     }
 
-    pub fn getPos(&self) -> Array1<f32>
+    pub fn getPos3(&self) -> Array1<f32>
     {
-        self.pos.clone()
+        self.pos.slice(s![0..3]).to_owned()
     }
 }
 

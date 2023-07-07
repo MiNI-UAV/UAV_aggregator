@@ -39,7 +39,7 @@ fn main() {
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone()); 
     let _wind = wind::Wind::new(_drones.clone(),_objects.clone());
-    let _colision_detector = collision::CollisionDetector::new(_drones.clone());
+    let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone());
 
     while running.load(Ordering::SeqCst) {
         // let drone = _drones.lock().unwrap();
