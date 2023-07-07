@@ -79,6 +79,7 @@ impl Objects
             let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
             capture_socket.set_subscribe(b"").unwrap();
             capture_socket.set_rcvtimeo(1000).unwrap();
+            capture_socket.set_conflate(true).unwrap();
             capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             while r.load(Ordering::SeqCst) {
                 let mut obj_states_msg =  zmq::Message::new();

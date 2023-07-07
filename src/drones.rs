@@ -89,7 +89,7 @@ impl Drones
         {
 
             for elem in drone.iter()  {
-                pos.push((elem.id,elem.state_arc.lock().unwrap().getPos()));
+                pos.push((elem.id,elem.state_arc.lock().unwrap().getPos3()));
             }
         }
         drop(drone);
