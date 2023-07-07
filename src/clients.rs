@@ -78,17 +78,27 @@ impl Clients
                 control.push(Some(
                     thread::spawn(move ||
                     {
+                        let mut skipedHeartbeats: usize = 0;
+                        let mut local_running = true;
                         control_pair_socket.set_rcvtimeo(1000).unwrap();
                         let address = format!("tcp://*:{}", next_port+1000);
                         control_pair_socket.bind(&address).unwrap();
-                        while r2.load(Ordering::SeqCst) {
+                        while r2.load(Ordering::SeqCst) && local_running {
                             let mut request =  zmq::Message::new();
                             if let Err(_) = control_pair_socket.recv(&mut request, 0)
                             {
+                                skipedHeartbeats += 1;
+                                if skipedHeartbeats == 5
+                                {
+                                    let mut d_lck = d2.lock().unwrap();
+                                    local_running = false;
+                                    d_lck.removeUAV(drone_no);
+                                    drop(d_lck);
+                                }
                                 continue;
                             }
                             let mut d_lck = d2.lock().unwrap();
-                            Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck);
+                            Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut skipedHeartbeats);
                             drop(d_lck);
                         }
                     })
@@ -109,16 +119,24 @@ impl Clients
         Clients{running: running, _proxies: proxies, _control: control, _replyer: Some(replyer)}
     }
 
-    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones)
+    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones,  skipedHeartbeats: &mut usize)
     {
-        let d = drones.drones.lock().unwrap();
+        let mut d = drones.drones.lock().unwrap();
         if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
         {
             match msg {
-                "shot" => {  
-                        drone.dropOrShot(None, None, None, None);
+                "beep" => {  
+                    *skipedHeartbeats = 0;
                 }
-                _ => {}
+                "shot" => {  
+                    drone.dropOrShot(None, None, None, None);
+                }
+                "kill" => {  
+                    d.retain_mut(|d| d.id != drone_no);
+                }
+                _ => {
+                    println!("Unknown command: {}", msg);
+                }
             }
         }
         drop(d);
