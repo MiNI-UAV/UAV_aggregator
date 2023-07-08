@@ -2,6 +2,8 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 
 use crate::drones::Drones;
 
+const HB_DISCONNECT: usize = 999;
+
 pub struct Clients
 {
     running: Arc<AtomicBool>,
@@ -88,7 +90,7 @@ impl Clients
                             if let Err(_) = control_pair_socket.recv(&mut request, 0)
                             {
                                 skipedHeartbeats += 1;
-                                if skipedHeartbeats == 5
+                                if skipedHeartbeats == HB_DISCONNECT
                                 {
                                     let mut d_lck = d2.lock().unwrap();
                                     local_running = false;
