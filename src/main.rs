@@ -42,18 +42,7 @@ fn main() {
     let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone());
 
     while running.load(Ordering::SeqCst) {
-        // let drone = _drones.lock().unwrap();
-        // if let Some(d) = drone.drones.get(0)
-        // {
-        //     for _ in 0..2 {
-        //         d.dropOrShot(None,None,None,Some([0.0,0.1,0.0]));
-        //         thread::sleep(time::Duration::from_millis(300));
-        //         d.dropOrShot(None,None,None,Some([0.0,-0.1,0.0]));
-        //         thread::sleep(time::Duration::from_millis(300));
-        //     }        
-        // }
-        // drop(drone);    
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(300));
     }
     println!("Bye!");
     stopSocket.send("TERMINATE", 0).unwrap();

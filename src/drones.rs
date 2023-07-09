@@ -42,7 +42,7 @@ impl Drones
                     //println!("{}",result);
                 }
                 drop(drones);
-                thread::sleep(time::Duration::from_millis(15));
+                thread::sleep(time::Duration::from_millis(10));
             }
         });
         Drones {ctx: _ctx, running: running, drones: drones, objects: objects, _state_publisher: Some(publisher), nextID: 0}

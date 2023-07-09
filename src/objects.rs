@@ -229,7 +229,7 @@ impl Drop for Objects {
                 Ok(None) =>
                 {
                     self._sendControlMsg("s");
-                    thread::sleep(time::Duration::from_millis(10));
+                    thread::sleep(time::Duration::from_millis(50));
                 }
                 Ok(_) =>
                 {
