@@ -37,7 +37,7 @@ impl CollisionDetector
                 drop(drones_lck);
 
                 let obj_lck = _objects.lock().unwrap();
-                let objs_pos = obj_lck.getPositions();
+                let objs_pos_vels = obj_lck.getPosVels();
                 drop(obj_lck);
                 
                 //Colisions between drones
@@ -45,7 +45,7 @@ impl CollisionDetector
                     for j in (i+1)..drones_pos.len() {
                         let obj1 = drones_pos.get(i).unwrap();
                         let obj2 = drones_pos.get(j).unwrap();
-                        let dist: Array1<f32> = obj1.1.clone()-obj2.1.clone();
+                        let dist: Array1<f32> = &obj1.1-&obj2.1;
                         if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
                         {
                             println!("Collision detected between drone {} and {}", obj1.0,obj2.0);
@@ -57,9 +57,9 @@ impl CollisionDetector
 
                 //Drone-object colisions
                 for obj1 in drones_pos.iter() {
-                    for obj2 in objs_pos.iter() {
-                        let dist: Array1<f32> = obj1.1.clone()-obj2.1.clone();
-                        if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
+                    for obj2 in objs_pos_vels.iter() {
+                        let dist: Array1<f32> = &obj1.1-&obj2.1;
+                        if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < MINIMAL_DISTANCE2
                         {
                             println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                         }
@@ -68,7 +68,7 @@ impl CollisionDetector
 
                 //Boundary box for objects
                 let mut objToKill = Vec::new();
-                for obj in objs_pos.iter() 
+                for obj in objs_pos_vels.iter() 
                 {
                     if obj.1[0] > BOUNDMAXX || obj.1[1] > BOUNDMAXY || obj.1[2] > BOUNDMAXZ
                         || obj.1[0] < BOUNDMINX || obj.1[1] < BOUNDMINY || obj.1[2] < BOUNDMINZ
@@ -87,7 +87,7 @@ impl CollisionDetector
                 }
 
 
-                thread::sleep(time::Duration::from_millis(100));
+                thread::sleep(time::Duration::from_millis(10));
             }
         });
         CollisionDetector {running: running, collision_checker: Some(collision_checker)}

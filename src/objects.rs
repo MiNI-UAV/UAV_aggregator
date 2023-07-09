@@ -189,6 +189,34 @@ impl Objects
         pos
     }
 
+    pub fn getVelocities(&self) -> Vec<(usize,Array1<f32>)>
+    {
+        let mut vel = Vec::<(usize,Array1<f32>)>::new();
+        let state = self.states.lock().unwrap();
+        if !state.is_empty()
+        {
+            for elem in state.iter()  {
+                vel.push((elem.id,elem.vel.clone()));
+            }
+        }
+        drop(state);
+        vel
+    }
+
+    pub fn getPosVels(&self) -> Vec<(usize,Array1<f32>, Array1<f32>)>
+    {
+        let mut posvel = Vec::<(usize,Array1<f32>,Array1<f32>)>::new();
+        let state = self.states.lock().unwrap();
+        if !state.is_empty()
+        {
+            for elem in state.iter()  {
+                posvel.push((elem.id,elem.pos.clone(),elem.vel.clone()));
+            }
+        }
+        drop(state);
+        posvel
+    }
+
 }
 
 impl Drop for Objects {
