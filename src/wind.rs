@@ -1,7 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use ndarray::{Array1,arr1};
 
-use crate::{drones::Drones, objects::{Objects}};
+use crate::{drones::Drones, objects::Objects};
 
 
 pub struct Wind

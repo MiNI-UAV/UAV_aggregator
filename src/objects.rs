@@ -175,6 +175,21 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    pub fn setForce(&self,id: usize, force: Array1<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("f:");
+        command.push_str(&id.to_string());
+        command.push(',');
+        command.push_str(&force[0].to_string());
+        command.push(',');
+        command.push_str(&force[1].to_string());
+        command.push(',');
+        command.push_str(&force[2].to_string());
+        //println!("{}",command);
+        self._sendControlMsg(&command);
+    }
+
     pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
     {
         let mut pos = Vec::<(usize,Array1<f32>)>::new();
@@ -216,7 +231,6 @@ impl Objects
         drop(state);
         posvel
     }
-
 }
 
 impl Drop for Objects {

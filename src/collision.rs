@@ -1,6 +1,6 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 
-use ndarray::{Array1};
+use ndarray::Array1;
 
 use crate::{drones::Drones, objects:: Objects};
 
@@ -86,6 +86,26 @@ impl CollisionDetector
                     drop(obj_lck);
                 }
 
+                //TEST ground
+                let k = 0.05f32;
+                let b = 0.2f32;
+                let mut forceToSend = Vec::<(usize,Array1<f32>)>::new();
+                for obj in objs_pos_vels.iter() {
+                    if obj.1[2] > 0.0
+                    {
+                        let mut force = Array1::<f32>::zeros(3);
+                        force[2] = -k*obj.1[2] - b*obj.2[2];
+                        forceToSend.push((obj.0,force.clone()));
+                    }
+                }
+                if !forceToSend.is_empty()
+                {
+                    let obj_lck = _objects.lock().unwrap();
+                    for elem in forceToSend {
+                        obj_lck.setForce(elem.0,elem.1);
+                    }
+                    drop(obj_lck);
+                }
 
                 thread::sleep(time::Duration::from_millis(10));
             }
