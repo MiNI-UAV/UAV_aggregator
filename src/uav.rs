@@ -19,6 +19,21 @@ impl DroneState {
     {
         self.pos.slice(s![0..3]).to_owned()
     }
+
+    pub fn getOri(&self) -> Array1<f32>
+    {
+        self.pos.slice(s![3..6]).to_owned()
+    }
+
+    pub fn getVel(&self) -> Array1<f32>
+    {
+        self.vel.slice(s![0..3]).to_owned()
+    }
+
+    pub fn getAngVel(&self) -> Array1<f32>
+    {
+        self.vel.slice(s![3..6]).to_owned()
+    }
 }
 
 impl ToString for DroneState {

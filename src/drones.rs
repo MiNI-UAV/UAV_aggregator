@@ -96,6 +96,22 @@ impl Drones
         pos
     }
 
+    pub fn getPosOriVels(&self) -> Vec<(usize,Array1<f32>,Array1<f32>,Array1<f32>,Array1<f32>)>
+    {
+        let mut pos = Vec::new();
+        let drone = self.drones.lock().unwrap();
+        if !drone.is_empty()
+        {
+
+            for elem in drone.iter()  {
+                let state_lck = elem.state_arc.lock().unwrap();
+                pos.push((elem.id,state_lck.getPos3(),state_lck.getOri(),state_lck.getVel(),state_lck.getAngVel()));
+            }
+        }
+        drop(drone);
+        pos
+    }
+
 }
 
 impl Drop for Drones{

@@ -2,7 +2,7 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 
 use ndarray::Array1;
 
-use crate::{drones::Drones, objects:: Objects};
+use crate::{drones::Drones, objects::Objects, config::{DroneConfig, self}};
 
 const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
 
@@ -22,18 +22,18 @@ pub struct CollisionDetector
 
 impl CollisionDetector
 {
-    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
+    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>, _config: Arc<DroneConfig>) -> Self
     {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
-            // let upperLimit = arr1(&[BOUNDMAXX, BOUNDMAXY, BOUNDMAXZ]);
-            // let lowerLimit = arr1(&[BOUNDMINX,BOUNDMINY, BOUNDMINZ]);
+            let rotorsPositions = _config.rotors.positions.clone();
+
             while r.load(Ordering::SeqCst) {
                 let drones_lck = _drones.lock().unwrap();
-                let drones_pos = drones_lck.getPositions();
+                let drones_pos_vel = drones_lck.getPosOriVels();
                 drop(drones_lck);
 
                 let obj_lck = _objects.lock().unwrap();
@@ -41,10 +41,10 @@ impl CollisionDetector
                 drop(obj_lck);
                 
                 //Colisions between drones
-                for i in 0..drones_pos.len() {
-                    for j in (i+1)..drones_pos.len() {
-                        let obj1 = drones_pos.get(i).unwrap();
-                        let obj2 = drones_pos.get(j).unwrap();
+                for i in 0..drones_pos_vel.len() {
+                    for j in (i+1)..drones_pos_vel.len() {
+                        let obj1 = drones_pos_vel.get(i).unwrap();
+                        let obj2 = drones_pos_vel.get(j).unwrap();
                         let dist: Array1<f32> = &obj1.1-&obj2.1;
                         if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
                         {
@@ -56,7 +56,7 @@ impl CollisionDetector
                 //Colision between objects are negligible
 
                 //Drone-object colisions
-                for obj1 in drones_pos.iter() {
+                for obj1 in drones_pos_vel.iter() {
                     for obj2 in objs_pos_vels.iter() {
                         let dist: Array1<f32> = &obj1.1-&obj2.1;
                         if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < MINIMAL_DISTANCE2
@@ -87,7 +87,7 @@ impl CollisionDetector
                 }
 
                 //TEST ground
-                let k = 0.05f32;
+                let k = 0.4f32;
                 let b = 0.2f32;
                 let mut forceToSend = Vec::<(usize,Array1<f32>)>::new();
                 for obj in objs_pos_vels.iter() {
@@ -107,7 +107,7 @@ impl CollisionDetector
                     drop(obj_lck);
                 }
 
-                thread::sleep(time::Duration::from_millis(10));
+                thread::sleep(time::Duration::from_millis(5));
             }
         });
         CollisionDetector {running: running, collision_checker: Some(collision_checker)}

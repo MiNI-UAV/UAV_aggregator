@@ -55,8 +55,8 @@ impl Wind
     fn calcWind(pos: &Array1<f32>) -> Array1<f32>
     {
         let mut result = arr1(&[0.0,0.0,0.0]);
-        result[0] = -0.5 * pos[2] + 20.0;
-        result[1] = -0.2 * pos[2] + 10.0;
+        result[0] = -0.05 * pos[2] + 2.0;
+        result[1] = -0.02 * pos[2] + 1.0;
         result
     }
 }
