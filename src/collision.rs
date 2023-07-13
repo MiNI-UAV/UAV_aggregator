@@ -148,15 +148,19 @@ impl CollisionDetector
                     (r, Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos, vel + om.cross(r))
                 }
             );
+            let mut forceSum = Vector3::<f32>::zeros();
+            let mut torqueSum = Vector3::<f32>::zeros();
             for (r, pos,vel) in worldPosVel
             {
-                if pos[2] + SPHERE_RADIUS > 0.0
+                if pos[2] + SPHERE_RADIUS > 10.0
                 {
                     let mut force = Vector3::<f32>::zeros();
                     force[2] = -k*(pos[2] + SPHERE_RADIUS) - b*vel[2];
-                    forceToSend.push((*id, force, r.cross(&force)));
+                    forceSum += force;
+                    torqueSum += r.cross(&force);
                 }
             }
+            forceToSend.push((*id, forceSum,torqueSum));
         }
         if !forceToSend.is_empty()
         {

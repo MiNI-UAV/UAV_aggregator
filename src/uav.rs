@@ -110,7 +110,7 @@ impl UAV
 
         uav.steer_socket.connect(&format!("ipc:///tmp/{}/steer",uav.name.to_owned()))
                         .expect("steer connect error");
-        uav.control_socket.set_rcvtimeo(1000).unwrap();
+        //uav.control_socket.set_rcvtimeo(1000).unwrap();
         uav.control_socket.connect(&format!("ipc:///tmp/{}/control",uav.name.to_owned()))
                         .expect("control connect error");
 
@@ -201,10 +201,17 @@ impl UAV
     {
         self.control_socket.send(&msg_str, 0).unwrap();
         let mut msg = zmq::Message::new();
-        self.control_socket.recv(&mut msg, 0).unwrap_or_else(|_| println!("Error sending {}", msg_str));
-        let rep = msg.as_str().unwrap();
-        debug_assert!(rep.contains("ok"));
-        rep.to_string()
+        if self.control_socket.recv(&mut msg, 0).is_ok()
+        {
+            let rep = msg.as_str().unwrap();
+            //println!("{}", msg_str);
+            assert!(rep.contains("ok"));
+            rep.to_string()
+        }
+        else {
+            println!("Error while sending: {}", msg_str);
+            String::new()
+        }      
     }
 
     pub fn sendWind(&self, wind: &Vector3<f32>)
