@@ -1,38 +1,38 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
-use ndarray::{Array1,arr1,s};
+use nalgebra::{Vector3,Vector6};
 use crate::objects::Objects;
 
 pub struct DroneState
 {
     time: f32,
-    pos: Array1<f32>,
-    vel: Array1<f32>,
+    pos: Vector6<f32>,
+    vel: Vector6<f32>,
     om: Vec<f32>,
 }
 
 impl DroneState {
     pub fn new() -> Self {
-        DroneState {time: -1.0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6]), om: Vec::new()}
+        DroneState {time: -1.0, pos: Vector6::repeat(-1.0f32), vel: Vector6::repeat(-1.0f32), om: Vec::new()}
     }
 
-    pub fn getPos3(&self) -> Array1<f32>
+    pub fn getPos3(&self) -> Vector3<f32>
     {
-        self.pos.slice(s![0..3]).to_owned()
+        self.pos.fixed_view::<3, 1>(0, 0).into()
     }
 
-    pub fn getOri(&self) -> Array1<f32>
+    pub fn getOri(&self) -> Vector3<f32>
     {
-        self.pos.slice(s![3..6]).to_owned()
+        self.pos.fixed_view::<3, 1>(3, 0).into()
     }
 
-    pub fn getVel(&self) -> Array1<f32>
+    pub fn getVel(&self) -> Vector3<f32>
     {
-        self.vel.slice(s![0..3]).to_owned()
+        self.vel.fixed_view::<3, 1>(0, 0).into()
     }
 
-    pub fn getAngVel(&self) -> Array1<f32>
+    pub fn getAngVel(&self) -> Vector3<f32>
     {
-        self.vel.slice(s![3..6]).to_owned()
+        self.vel.fixed_view::<3, 1>(3, 0).into()
     }
 }
 
@@ -110,7 +110,7 @@ impl UAV
 
         uav.steer_socket.connect(&format!("ipc:///tmp/{}/steer",uav.name.to_owned()))
                         .expect("steer connect error");
-
+        uav.control_socket.set_rcvtimeo(1000).unwrap();
         uav.control_socket.connect(&format!("ipc:///tmp/{}/control",uav.name.to_owned()))
                         .expect("control connect error");
 
@@ -136,7 +136,7 @@ impl UAV
 
         let parseToArray = |msg: &str, start: usize|
         {
-            let mut array: Array1<f32> = arr1(&[-1.0; 6]);
+            let mut array =  Vector6::repeat(-1.0f32);
             let trimmed = msg.chars().skip(start).collect::<String>();
             let items = trimmed.split(',').take(6);
 
@@ -203,11 +203,11 @@ impl UAV
         let mut msg = zmq::Message::new();
         self.control_socket.recv(&mut msg, 0).unwrap_or_else(|_| println!("Error sending {}", msg_str));
         let rep = msg.as_str().unwrap();
-        assert!(rep.contains("ok"));
+        debug_assert!(rep.contains("ok"));
         rep.to_string()
     }
 
-    pub fn sendWind(&self, wind: &Array1<f32>)
+    pub fn sendWind(&self, wind: &Vector3<f32>)
     {
         let mut command = String::with_capacity(30);
         command.push_str("w:");
@@ -218,6 +218,26 @@ impl UAV
         command.push_str(&wind[2].to_string());
         self._sendControlMsg(&command);
     }
+
+    pub fn updateForce(&self, force: &Vector3<f32>, torque: &Vector3<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("f:");
+        command.push_str(&force[0].to_string());
+        command.push(',');
+        command.push_str(&force[1].to_string());
+        command.push(',');
+        command.push_str(&force[2].to_string());
+        command.push(',');
+        command.push_str(&torque[0].to_string());
+        command.push(',');
+        command.push_str(&torque[1].to_string());
+        command.push(',');
+        command.push_str(&torque[2].to_string());
+
+        self._sendControlMsg(&command);
+    }
+
 
     pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>)
     {
@@ -245,13 +265,13 @@ impl UAV
         command.push(',');
         command.push_str(&r[2].to_string());
         let rep = self._sendControlMsg(&command);
-        let mut vel = arr1(&[0.0,0.0,0.0]);
+        let mut vel = Vector3::zeros();
         for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
         {
             vel[i] = elem.parse::<f32>().unwrap();
         }
         let state = self.state_arc.lock().unwrap();
-        let pos = state.pos.clone();
+        let pos = state.getPos3();
         drop(state);
         let objects = self.objects_arc.lock().unwrap();
         objects.addObj(*mass, *CS, pos, vel);

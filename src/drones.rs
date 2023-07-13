@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use ndarray::Array1;
+use nalgebra::Vector3;
 use crate::uav::{UAV,DroneState};
 use crate::objects::Objects;
 
@@ -81,7 +81,7 @@ impl Drones
         }
     }
 
-    pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
+    pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::new();
         let drone = self.drones.lock().unwrap();
@@ -96,7 +96,7 @@ impl Drones
         pos
     }
 
-    pub fn getPosOriVels(&self) -> Vec<(usize,Array1<f32>,Array1<f32>,Array1<f32>,Array1<f32>)>
+    pub fn getPosOriVels(&self) -> Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>
     {
         let mut pos = Vec::new();
         let drone = self.drones.lock().unwrap();
@@ -110,6 +110,16 @@ impl Drones
         }
         drop(drone);
         pos
+    }
+
+    pub fn updateForce(&self, id: &usize, force: &Vector3<f32>, torque: &Vector3<f32>)
+    {
+        let drone_lck = self.drones.lock().unwrap();
+        if let Some(uav) = drone_lck.iter().find(|uav| uav.id == *id)
+        {
+            uav.updateForce(force,torque);
+        }
+        drop(drone_lck);
     }
 
 }

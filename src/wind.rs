@@ -1,5 +1,5 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
-use ndarray::{Array1,arr1};
+use nalgebra::Vector3;
 
 use crate::{drones::Drones, objects::Objects};
 
@@ -21,7 +21,7 @@ impl Wind
             while r.load(Ordering::SeqCst) {
                 let drones_lck = drones.lock().unwrap();
                 let pos = drones_lck.getPositions();
-                let wind: Vec<(usize,Array1<f32>)> = pos.iter().map(|p| (p.0, Wind::calcWind(&p.1))).collect();
+                let wind: Vec<(usize,Vector3<f32>)> = pos.iter().map(|p| (p.0, Wind::calcWind(&p.1))).collect();
                 thread::sleep(time::Duration::from_millis(50));
                 for (id,w) in wind.iter()
                 {
@@ -37,7 +37,7 @@ impl Wind
                 let objects_lck = objects.lock().unwrap();
                 let pos = objects_lck.getPositions();
                 drop(objects_lck);
-                let wind: Vec<(usize,Array1<f32>)> = pos.iter().map(|p| (p.0,Wind::calcWind(&p.1))).collect();
+                let wind: Vec<(usize,Vector3<f32>)> = pos.iter().map(|p| (p.0,Wind::calcWind(&p.1))).collect();
                 if wind.is_empty()
                 {
                     continue;
@@ -52,9 +52,9 @@ impl Wind
         Wind {running: running, wind_reqester: Some(wind_reqester) }
     }
 
-    fn calcWind(pos: &Array1<f32>) -> Array1<f32>
+    fn calcWind(pos: &Vector3<f32>) -> Vector3<f32>
     {
-        let mut result = arr1(&[0.0,0.0,0.0]);
+        let mut result = Vector3::zeros();
         result[0] = -0.05 * pos[2] + 2.0;
         result[1] = -0.02 * pos[2] + 1.0;
         result

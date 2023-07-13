@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use xmltree::Element;
-use ndarray::Array1;
+use nalgebra::Vector3;
 
 pub struct DroneConfig {
     pub name: String,
@@ -28,7 +28,7 @@ pub struct Rotors {
     pub num: u32,
     pub force_coeff: f32,
     pub torque_coeff: f32,
-    pub positions: Vec<Array1<f32>>,
+    pub positions: Vec<Vector3<f32>>,
     pub direction: Vec<i32>,
     pub time_constants: Vec<f32>,
 }
@@ -123,7 +123,7 @@ fn parse_rotors(rotors_elem: &Element) -> Rotors {
                 .split_whitespace()
                 .map(|value| value.parse().unwrap())
                 .collect();
-            Array1::<f32>::from_vec(values)
+            Vector3::<f32>::from_vec(values)
         })
         .collect();
 
