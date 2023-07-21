@@ -1,23 +1,38 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
-use ndarray::{Array1,arr1,s};
-use crate::objects::{Objects};
+use nalgebra::{Vector3,Vector6};
+use crate::objects::Objects;
 
 pub struct DroneState
 {
     time: f32,
-    pos: Array1<f32>,
-    vel: Array1<f32>,
+    pos: Vector6<f32>,
+    vel: Vector6<f32>,
     om: Vec<f32>,
 }
 
 impl DroneState {
     pub fn new() -> Self {
-        DroneState {time: -1.0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6]), om: Vec::new()}
+        DroneState {time: -1.0, pos: Vector6::repeat(-1.0f32), vel: Vector6::repeat(-1.0f32), om: Vec::new()}
     }
 
-    pub fn getPos3(&self) -> Array1<f32>
+    pub fn getPos3(&self) -> Vector3<f32>
     {
-        self.pos.slice(s![0..3]).to_owned()
+        self.pos.fixed_view::<3, 1>(0, 0).into()
+    }
+
+    pub fn getOri(&self) -> Vector3<f32>
+    {
+        self.pos.fixed_view::<3, 1>(3, 0).into()
+    }
+
+    pub fn getVel(&self) -> Vector3<f32>
+    {
+        self.vel.fixed_view::<3, 1>(0, 0).into()
+    }
+
+    pub fn getAngVel(&self) -> Vector3<f32>
+    {
+        self.vel.fixed_view::<3, 1>(3, 0).into()
     }
 }
 
@@ -95,7 +110,7 @@ impl UAV
 
         uav.steer_socket.connect(&format!("ipc:///tmp/{}/steer",uav.name.to_owned()))
                         .expect("steer connect error");
-
+        //uav.control_socket.set_rcvtimeo(1000).unwrap();
         uav.control_socket.connect(&format!("ipc:///tmp/{}/control",uav.name.to_owned()))
                         .expect("control connect error");
 
@@ -121,7 +136,7 @@ impl UAV
 
         let parseToArray = |msg: &str, start: usize|
         {
-            let mut array: Array1<f32> = arr1(&[-1.0; 6]);
+            let mut array =  Vector6::repeat(-1.0f32);
             let trimmed = msg.chars().skip(start).collect::<String>();
             let items = trimmed.split(',').take(6);
 
@@ -186,13 +201,20 @@ impl UAV
     {
         self.control_socket.send(&msg_str, 0).unwrap();
         let mut msg = zmq::Message::new();
-        self.control_socket.recv(&mut msg, 0).unwrap_or_else(|_| println!("Error sending {}", msg_str));
-        let rep = msg.as_str().unwrap();
-        assert!(rep.contains("ok"));
-        rep.to_string()
+        if self.control_socket.recv(&mut msg, 0).is_ok()
+        {
+            let rep = msg.as_str().unwrap();
+            //println!("{}", msg_str);
+            assert!(rep.contains("ok"));
+            rep.to_string()
+        }
+        else {
+            println!("Error while sending: {}", msg_str);
+            String::new()
+        }      
     }
 
-    pub fn sendWind(&self, wind: &Array1<f32>)
+    pub fn sendWind(&self, wind: &Vector3<f32>)
     {
         let mut command = String::with_capacity(30);
         command.push_str("w:");
@@ -204,6 +226,26 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
+    pub fn updateForce(&self, force: &Vector3<f32>, torque: &Vector3<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("f:");
+        command.push_str(&force[0].to_string());
+        command.push(',');
+        command.push_str(&force[1].to_string());
+        command.push(',');
+        command.push_str(&force[2].to_string());
+        command.push(',');
+        command.push_str(&torque[0].to_string());
+        command.push(',');
+        command.push_str(&torque[1].to_string());
+        command.push(',');
+        command.push_str(&torque[2].to_string());
+
+        self._sendControlMsg(&command);
+    }
+
+
     pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>)
     {
         //9mm bullet
@@ -214,7 +256,7 @@ impl UAV
 
         //paintball
         let mass = mass.get_or_insert(0.003);
-        let speed = speed.get_or_insert(90.0);
+        let speed = speed.get_or_insert(00.0);
         let CS = CS.get_or_insert(0.47*0.000126645);
         let r = r.get_or_insert([0.0,0.0,0.1]);
 
@@ -230,17 +272,43 @@ impl UAV
         command.push(',');
         command.push_str(&r[2].to_string());
         let rep = self._sendControlMsg(&command);
-        let mut vel = arr1(&[0.0,0.0,0.0]);
+        let mut vel = Vector3::zeros();
         for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
         {
             vel[i] = elem.parse::<f32>().unwrap();
         }
         let state = self.state_arc.lock().unwrap();
-        let pos = state.pos.clone();
+        let pos = state.getPos3();
         drop(state);
         let objects = self.objects_arc.lock().unwrap();
         objects.addObj(*mass, *CS, pos, vel);
         drop(objects);
+    }
+
+    pub fn sendSurfaceCollison(&self, COR: f32, mi_s: f32, mi_d: f32,
+        collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("j:");
+        command.push_str(&COR.to_string());
+        command.push(',');
+        command.push_str(&mi_s.to_string());
+        command.push(',');
+        command.push_str(&mi_d.to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[0].to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[1].to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[2].to_string());
+        command.push(',');
+        command.push_str(&normalVector[0].to_string());
+        command.push(',');
+        command.push_str(&normalVector[1].to_string());
+        command.push(',');
+        command.push_str(&normalVector[2].to_string());
+        //println!("{}", command);
+        self._sendControlMsg(&command);
     }
 
 }

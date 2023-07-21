@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use ndarray::Array1;
+use nalgebra::Vector3;
 use crate::uav::{UAV,DroneState};
 use crate::objects::Objects;
 
@@ -81,7 +81,7 @@ impl Drones
         }
     }
 
-    pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
+    pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::new();
         let drone = self.drones.lock().unwrap();
@@ -94,6 +94,42 @@ impl Drones
         }
         drop(drone);
         pos
+    }
+
+    pub fn getPosOriVels(&self) -> Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>
+    {
+        let mut pos = Vec::new();
+        let drone = self.drones.lock().unwrap();
+        if !drone.is_empty()
+        {
+
+            for elem in drone.iter()  {
+                let state_lck = elem.state_arc.lock().unwrap();
+                pos.push((elem.id,state_lck.getPos3(),state_lck.getOri(),state_lck.getVel(),state_lck.getAngVel()));
+            }
+        }
+        drop(drone);
+        pos
+    }
+
+    pub fn updateForce(&self, id: &usize, force: &Vector3<f32>, torque: &Vector3<f32>)
+    {
+        let drone_lck = self.drones.lock().unwrap();
+        if let Some(uav) = drone_lck.iter().find(|uav| uav.id == *id)
+        {
+            uav.updateForce(force,torque);
+        }
+        drop(drone_lck);
+    }
+
+    pub fn sendSurfaceCollison(&self, id: &usize, COR: f32, mi_s: f32, mi_d: f32, collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
+    {
+        let drone_lck = self.drones.lock().unwrap();
+        if let Some(uav) = drone_lck.iter().find(|uav| uav.id == *id)
+        {
+            uav.sendSurfaceCollison(COR, mi_s, mi_d, collisionPoint, normalVector);
+        }
+        drop(drone_lck);
     }
 
 }

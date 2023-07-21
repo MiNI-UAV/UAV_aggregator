@@ -1,24 +1,24 @@
 use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time};
-use ndarray::{Array1,arr1};
+use nalgebra::Vector3;
 
 
 #[derive(Debug)]
 pub struct ObjectState
 {
     pub id: usize,
-    pub pos: Array1<f32>,
-    pub vel: Array1<f32>,
+    pub pos: Vector3<f32>,
+    pub vel: Vector3<f32>,
 }
 
 impl ObjectState {
     pub fn new() -> Self {
-        ObjectState {id: 0, pos: arr1(&[-1.0; 6]), vel: arr1(&[-1.0; 6])}
+        ObjectState {id: 0, pos: Vector3::repeat(-1.0f32), vel: Vector3::repeat(-1.0f32)}
     }
 
     pub fn fromInfo(info: &str) -> Self {
         let mut id: usize = 0;
-        let mut pos: Array1<f32> = arr1(&[-1.0;3]);
-        let mut vel: Array1<f32> = arr1(&[-1.0;3]);
+        let mut pos: Vector3<f32> = Vector3::repeat(-1.0f32);
+        let mut vel: Vector3<f32> = Vector3::repeat(-1.0f32);
         let list = info.split(",");
         for (i,elem) in list.into_iter().enumerate()
         {
@@ -131,7 +131,7 @@ impl Objects
         rep.to_string()
     }
 
-    pub fn addObj(&self, mass: f32, CS: f32, pos: Array1<f32>, vel: Array1<f32>)
+    pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>)
     {
         let mut command = String::with_capacity(60);
         command.push_str("a:");
@@ -158,7 +158,7 @@ impl Objects
         self._sendControlMsg(&format!("r:{}",id.to_string()));
     }
 
-    pub fn updateWind(&self, wind: Vec<(usize,Array1<f32>)>)
+    pub fn updateWind(&self, wind: Vec<(usize,Vector3<f32>)>)
     {
         let mut command = String::with_capacity(30*wind.len());
         command.push_str("w:");
@@ -175,9 +175,24 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
-    pub fn getPositions(&self) -> Vec<(usize,Array1<f32>)>
+    pub fn setForce(&self,id: usize, force: Vector3<f32>)
     {
-        let mut pos = Vec::<(usize,Array1<f32>)>::new();
+        let mut command = String::with_capacity(30);
+        command.push_str("f:");
+        command.push_str(&id.to_string());
+        command.push(',');
+        command.push_str(&force[0].to_string());
+        command.push(',');
+        command.push_str(&force[1].to_string());
+        command.push(',');
+        command.push_str(&force[2].to_string());
+        //println!("{}",command);
+        self._sendControlMsg(&command);
+    }
+
+    pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
+    {
+        let mut pos = Vec::<(usize,Vector3<f32>)>::new();
         let state = self.states.lock().unwrap();
         if !state.is_empty()
         {
@@ -189,9 +204,9 @@ impl Objects
         pos
     }
 
-    pub fn getVelocities(&self) -> Vec<(usize,Array1<f32>)>
+    pub fn getVelocities(&self) -> Vec<(usize,Vector3<f32>)>
     {
-        let mut vel = Vec::<(usize,Array1<f32>)>::new();
+        let mut vel = Vec::<(usize,Vector3<f32>)>::new();
         let state = self.states.lock().unwrap();
         if !state.is_empty()
         {
@@ -203,9 +218,9 @@ impl Objects
         vel
     }
 
-    pub fn getPosVels(&self) -> Vec<(usize,Array1<f32>, Array1<f32>)>
+    pub fn getPosVels(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>)>
     {
-        let mut posvel = Vec::<(usize,Array1<f32>,Array1<f32>)>::new();
+        let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>)>::new();
         let state = self.states.lock().unwrap();
         if !state.is_empty()
         {
@@ -216,7 +231,6 @@ impl Objects
         drop(state);
         posvel
     }
-
 }
 
 impl Drop for Objects {

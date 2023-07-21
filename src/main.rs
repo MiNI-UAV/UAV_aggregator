@@ -12,9 +12,11 @@ pub mod uav;
 pub mod wind;
 pub mod collision;
 pub mod objects;
+pub mod config;
 
 fn main() {
-    let ctx = zmq::Context::new();
+    let drone_config = Arc::new(config::DroneConfig::parse("config.xml").expect("Config file error"));
+    let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let r2 = running.clone();
@@ -39,7 +41,7 @@ fn main() {
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone()); 
     let _wind = wind::Wind::new(_drones.clone(),_objects.clone());
-    let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone());
+    let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone(),drone_config.clone());
 
     while running.load(Ordering::SeqCst) {
         thread::sleep(time::Duration::from_millis(300));
