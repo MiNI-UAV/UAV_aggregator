@@ -33,6 +33,10 @@ impl CollisionDetector
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
             let rotorsPositions = _config.rotors.positions.clone();
+            let mut droneCorners = Vec::<Vector3<f32>>::with_capacity(rotorsPositions.len()*2);
+            droneCorners.extend(rotorsPositions.iter().map(|v| v + Vector3::new(0.0, 0.0, SPHERE_RADIUS)));
+            droneCorners.extend(rotorsPositions.iter().map(|v| v + Vector3::new(0.0, 0.0, -SPHERE_RADIUS)));
+            //droneCorners.push(Vector3::new(0.01, 0.0, 0.0));
 
             while r.load(Ordering::SeqCst) {
                 let drones_lck = _drones.lock().unwrap();
@@ -51,9 +55,10 @@ impl CollisionDetector
 
                 //TEST
                 Self::ground_objs(&objs_pos_vels, &_objects);
-                Self::ground_drones(&drones_pos_vel,&_drones, &rotorsPositions);
+                //Self::ground_drones(&drones_pos_vel,&_drones, &rotorsPositions);
+                Self::spring_dumper_drone(&drones_pos_vel,&_drones, &droneCorners);
 
-                thread::sleep(time::Duration::from_millis(5));
+                thread::sleep(time::Duration::from_millis(1));
             }
         });
         CollisionDetector {running, collision_checker: Some(collision_checker)}
@@ -111,30 +116,8 @@ impl CollisionDetector
         }
     }
 
-    fn ground_objs(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
-        objects: &Arc<Mutex<Objects>>)
-    {
-        let k = 0.4f32;
-        let b = 0.2f32;
-        let mut forceToSend = Vec::<(usize,Vector3<f32>)>::new();
-        for obj in objs_pos_vels.iter() {
-            if obj.1[2] > 0.0
-            {
-                let mut force = Vector3::<f32>::zeros();
-                force[2] = -k*obj.1[2] - b*obj.2[2];
-                forceToSend.push((obj.0,force.clone()));
-            }
-        }
-        if !forceToSend.is_empty()
-        {
-            let obj_lck = objects.lock().unwrap();
-            for elem in forceToSend {
-                obj_lck.setForce(elem.0,elem.1);
-            }
-            drop(obj_lck);
-        }
-    }
 
+    #[allow(dead_code)]
     fn ground_drones(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
         drones: &Arc<Mutex<Drones>>, rotorPos: &Vec<Vector3<f32>>)
     {
@@ -167,6 +150,58 @@ impl CollisionDetector
             let drones_lck = drones.lock().unwrap();
             for (id,force,torque) in &forceToSend {
                 drones_lck.updateForce(id,force,torque);
+            }
+            drop(drones_lck);
+        }
+    }
+
+    fn ground_objs(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
+        objects: &Arc<Mutex<Objects>>)
+    {
+        let k = 0.4f32;
+        let b = 0.2f32;
+        let mut forceToSend = Vec::<(usize,Vector3<f32>)>::new();
+        for obj in objs_pos_vels.iter() {
+            if obj.1[2] > 0.0
+            {
+                let mut force = Vector3::<f32>::zeros();
+                force[2] = -k*obj.1[2] - b*obj.2[2];
+                forceToSend.push((obj.0,force.clone()));
+            }
+        }
+        if !forceToSend.is_empty()
+        {
+            let obj_lck = objects.lock().unwrap();
+            for elem in forceToSend {
+                obj_lck.setForce(elem.0,elem.1);
+            }
+            drop(obj_lck);
+        }
+    }
+
+    
+    fn spring_dumper_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
+        drones: &Arc<Mutex<Drones>>, drone_corners: &Vec<Vector3<f32>>)
+    {
+        let n = Vector3::new(0.0,0.0,-1.0);
+        let COR = 0.5f32;
+        let mi_s = 0.4f32;
+        let mi_d = 0.3f32;
+
+        let mut collisionsToSend = Vec::<(usize, Vector3<f32>)>::new();
+        for (id, pos, ori, _, _) in objs_pos_vels.iter()
+        {
+            let points = drone_corners.iter()
+                .map(|r| Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos)
+                .filter(|v| v.z > 5.0);
+            
+              collisionsToSend.extend(points.map(|v| (*id,v)));
+        }
+        if !collisionsToSend.is_empty()
+        {
+            let drones_lck = drones.lock().unwrap();
+            for (id,colisionPoint) in &collisionsToSend {
+                drones_lck.sendSurfaceCollison(id, COR, mi_s, mi_d, colisionPoint, &n);
             }
             drop(drones_lck);
         }

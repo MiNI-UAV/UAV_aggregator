@@ -122,6 +122,16 @@ impl Drones
         drop(drone_lck);
     }
 
+    pub fn sendSurfaceCollison(&self, id: &usize, COR: f32, mi_s: f32, mi_d: f32, collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
+    {
+        let drone_lck = self.drones.lock().unwrap();
+        if let Some(uav) = drone_lck.iter().find(|uav| uav.id == *id)
+        {
+            uav.sendSurfaceCollison(COR, mi_s, mi_d, collisionPoint, normalVector);
+        }
+        drop(drone_lck);
+    }
+
 }
 
 impl Drop for Drones{

@@ -285,6 +285,32 @@ impl UAV
         drop(objects);
     }
 
+    pub fn sendSurfaceCollison(&self, COR: f32, mi_s: f32, mi_d: f32,
+        collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("j:");
+        command.push_str(&COR.to_string());
+        command.push(',');
+        command.push_str(&mi_s.to_string());
+        command.push(',');
+        command.push_str(&mi_d.to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[0].to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[1].to_string());
+        command.push(',');
+        command.push_str(&collisionPoint[2].to_string());
+        command.push(',');
+        command.push_str(&normalVector[0].to_string());
+        command.push(',');
+        command.push_str(&normalVector[1].to_string());
+        command.push(',');
+        command.push_str(&normalVector[2].to_string());
+        //println!("{}", command);
+        self._sendControlMsg(&command);
+    }
+
 }
 
 impl Drop for UAV {
