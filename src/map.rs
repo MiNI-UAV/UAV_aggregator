@@ -1,10 +1,19 @@
-use nalgebra::{Vector3, Matrix3};
+use nalgebra::{Vector3, Matrix3,convert};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::collections::{HashMap,HashSet};
+use std::hash::{Hash, Hasher};
+
+const GRID: Vector3<usize> = Vector3::new(20,20,5);
 
 pub struct Map
 {
-    walls: Obj,
+    _walls: Obj,
+    _min: Vector3<f32>,
+    _max: Vector3<f32>,
+    _step: Vector3<f32>,
+    facesInChunk: HashMap<Vector3<usize>,HashSet<Face>>,
+
     collisionPlusEps: f32,
     collisionMinusEps: f32
 }
@@ -14,22 +23,85 @@ impl Map
     pub fn new(path: &str, collisionPlusEps: f32, collisionMinusEps: f32) -> Self
     {
         let walls = Obj::from_file(path);
-        Map{walls, collisionPlusEps, collisionMinusEps}
+        let (min,max) = walls.boundingBox();
+        let grid: Vector3<f32> = convert(GRID);
+        let step = (max-min).component_div(&grid);
+
+        println!("Min: {} Max: {}", min,max);
+        println!("Chunk size: {}", step);
+
+        let facesInChunk =  HashMap::<Vector3<usize>,HashSet<Face>>::new();
+
+        let mut map = Map{_walls: walls, _min: min, _max: max, _step: step,
+            facesInChunk, collisionPlusEps, collisionMinusEps};
+        map.insertFace();
+        map
     }
 
     pub fn checkWalls(&self, point: Vector3<f32>) -> Vec<Vector3<f32>>
     {
         let mut normalsInColisionPoint = Vec::new();
-        for face in &self.walls.faces {
-            if let (true, dist) = face.projectPoint(point)
-            {
-                if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+        let chunk = self.calcChunk(point);
+        if let Some(faces) = self.facesInChunk.get(&chunk)
+        {
+            for face in faces {
+                if let (true, dist) = face.projectPoint(point)
                 {
-                    normalsInColisionPoint.push(face.normal)
+                    if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+                    {
+                        normalsInColisionPoint.push(face.normal)
+                    }
                 }
             }
         }
         normalsInColisionPoint
+    }
+
+    fn calcChunk(&self, point: Vector3<f32>) -> Vector3<usize>
+    {
+        let pos =  (point -  self._min).component_div(&self._step);
+        let chunk = Vector3::new(
+            pos.x.floor() as usize,
+            pos.y.floor() as usize,
+            pos.z.floor() as usize,
+        );
+        chunk
+    }
+
+    fn insertFace(&mut self)
+    {
+        for face in &self._walls.faces
+        {
+            let chunks  = face._vertices.map(|p| self.calcChunk(p));
+            let mut minChunks = chunks[0];
+            let mut maxChunks = chunks[0];
+            for chunk in chunks
+            {
+                minChunks = minChunks.inf(&chunk);
+                maxChunks = maxChunks.sup(&chunk);
+            }
+
+            for i in minChunks[0]..=maxChunks[0]
+            {
+                for j in minChunks[1]..=maxChunks[1]
+                {
+                    for k in minChunks[2]..=maxChunks[2]
+                    {
+                        let chunk = Vector3::new(i,j,k);
+                        if let Some(v) = self.facesInChunk.get_mut(&chunk)
+                        {
+                            v.insert(face.clone());
+                        }
+                        else
+                        {
+                            let mut set = HashSet::new();
+                            set.insert(face.clone());
+                            self.facesInChunk.insert(chunk, set);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -85,7 +157,7 @@ impl Obj
                             face_normals[i] = normals[items[2].parse::<usize>().unwrap()-1];
                         }
                     }
-                    faces.push(Face::new(face_vertices,face_normals));
+                    faces.push(Face::new(faces.len(),face_vertices,face_normals));
                 }
                 _ => continue,
             }
@@ -93,10 +165,26 @@ impl Obj
 
         Obj{_vertices: vertices, _normals: normals,faces} 
     }
+
+    fn boundingBox(&self) -> (Vector3<f32>, Vector3<f32>)
+    {
+        let mut min = Vector3::repeat(f32::MAX);
+        let mut max = Vector3::repeat(f32::MIN);
+        for v in &self._vertices 
+        {
+            min = min.inf(v);
+            max = max.sup(v);
+        }
+        (min,max)
+    }
+
+
 }
 
+#[derive(Clone)]
 struct Face
 {
+    id:usize,
     _vertices: [Vector3<f32>;3],
     _normals: [Vector3<f32>;3],
     normal: Vector3<f32>,
@@ -106,7 +194,7 @@ struct Face
 
 impl Face {
 
-    fn new(vertices: [Vector3<f32>;3],normals: [Vector3<f32>;3]) -> Self
+    fn new(id : usize , vertices: [Vector3<f32>;3],normals: [Vector3<f32>;3]) -> Self
     {
         let s = vertices[1]-vertices[0];
         let t = vertices[2]-vertices[0];
@@ -120,7 +208,7 @@ impl Face {
         let invProjectMatrix = Matrix3::from_columns(&[s,t,n]);
         //println!("Inv: {}", invProjectMatrix);
 
-        Face{_vertices: vertices, _normals: normals, normal: n,
+        Face{id, _vertices: vertices, _normals: normals, normal: n,
                 projectMatrix: invProjectMatrix.try_inverse().expect("Can not inverse project matrix"),
                 base: vertices[0].clone()}
     }
@@ -144,5 +232,18 @@ impl Face {
             return (true,res[2])
         } 
         (false, 0.0)
+    }
+}
+
+impl PartialEq for Face {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for Face {}
+
+impl Hash for Face {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }
