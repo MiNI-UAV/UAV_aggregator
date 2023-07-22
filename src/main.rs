@@ -13,6 +13,7 @@ pub mod wind;
 pub mod collision;
 pub mod objects;
 pub mod config;
+pub mod map;
 
 fn main() {
     let drone_config = Arc::new(config::DroneConfig::parse("config.xml").expect("Config file error"));

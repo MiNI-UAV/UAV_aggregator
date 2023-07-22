@@ -1,8 +1,13 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
-
 use nalgebra::{Vector3,geometry::Rotation3};
+use crate::{drones::Drones, objects::Objects, config::DroneConfig, map::Map};
 
-use crate::{drones::Drones, objects::Objects, config::DroneConfig};
+const MAP_MODEL_PATH: &str = "dust.obj";
+const COLLISION_PLUS_EPS: f32 = 0.1;
+const COLLISION_MINUS_EPS: f32 = -0.3;
+const COR: f32  = 0.5f32;
+const MI_S: f32  = 0.4f32;
+const MI_D: f32  = 0.3f32;
 
 const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
 
@@ -29,6 +34,7 @@ impl CollisionDetector
     {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
+        let map = Map::new(MAP_MODEL_PATH,COLLISION_PLUS_EPS,COLLISION_MINUS_EPS);
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
@@ -52,13 +58,17 @@ impl CollisionDetector
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels);
                 Self::boundary_box_obj(&objs_pos_vels, &_objects);
                 
+                //Drone collision with map
+                Self::impulse_collision(&drones_pos_vel,&_drones, &droneCorners,&map);
+                
 
                 //TEST
                 Self::ground_objs(&objs_pos_vels, &_objects);
-                //Self::ground_drones(&drones_pos_vel,&_drones, &rotorsPositions);
-                Self::spring_dumper_drone(&drones_pos_vel,&_drones, &droneCorners);
+                //Self::spring_dumper_drone(&drones_pos_vel,&_drones, &rotorsPositions);
 
+                //println!("t {:?}",time::SystemTime::now());
                 thread::sleep(time::Duration::from_millis(1));
+
             }
         });
         CollisionDetector {running, collision_checker: Some(collision_checker)}
@@ -118,7 +128,7 @@ impl CollisionDetector
 
 
     #[allow(dead_code)]
-    fn ground_drones(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
+    fn spring_dumper_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
         drones: &Arc<Mutex<Drones>>, rotorPos: &Vec<Vector3<f32>>)
     {
         let k = 0.4f32;
@@ -179,29 +189,26 @@ impl CollisionDetector
         }
     }
 
-    
-    fn spring_dumper_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>, drone_corners: &Vec<Vector3<f32>>)
+    fn impulse_collision(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
+        drones: &Arc<Mutex<Drones>>, drone_corners: &Vec<Vector3<f32>>, map: &Map)
     {
-        let n = Vector3::new(0.0,0.0,-1.0);
-        let COR = 0.5f32;
-        let mi_s = 0.4f32;
-        let mi_d = 0.3f32;
+        let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
 
-        let mut collisionsToSend = Vec::<(usize, Vector3<f32>)>::new();
+        //For every drone
         for (id, pos, ori, _, _) in objs_pos_vels.iter()
         {
-            let points = drone_corners.iter()
-                .map(|r| Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos)
-                .filter(|v| v.z > 5.0);
-            
-              collisionsToSend.extend(points.map(|v| (*id,v)));
+            //For every point of drone
+            for point in drone_corners.iter()
+            .map(|r| Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos)
+            {  
+                collisionsToSend.extend(map.checkWalls(point).iter().map(|n| (*id,point,n.clone())));
+            }
         }
         if !collisionsToSend.is_empty()
         {
             let drones_lck = drones.lock().unwrap();
-            for (id,colisionPoint) in &collisionsToSend {
-                drones_lck.sendSurfaceCollison(id, COR, mi_s, mi_d, colisionPoint, &n);
+            for (id,colisionPoint, normalVector) in &collisionsToSend {
+                drones_lck.sendSurfaceCollison(id, COR, MI_S, MI_D, colisionPoint, normalVector);
             }
             drop(drones_lck);
         }
