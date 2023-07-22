@@ -102,6 +102,11 @@ impl Map
                 }
             }
         }
+
+        // for elem in &self.facesInChunk
+        // {
+        //     println!("Chunk: {} - faces: {}", elem.0, elem.1.len());
+        // }
     }
 }
 
@@ -219,16 +224,13 @@ impl Face {
         let res = self.projectMatrix* (point-self.base);
         if res[0] >= 0.0 && res[0] <= 1.0 && res[1] >= 0.0 && res[1] <= 1.0 && res[0]+res[1] <= 1.0
         {
-            if res[2].abs() < 0.1
-            {
-
-                println!("Point: {}", point);
-                println!("Face vertex: {:?}", self._vertices);
-                println!("Face normal: {:?}", self.normal);
-                println!("Res: {}", res);
-                            
-            }
-
+            // if res[2].abs() < 0.1
+            // {
+            //     println!("Point: {}", point);
+            //     println!("Face vertex: {:?}", self._vertices);
+            //     println!("Face normal: {:?}", self.normal);
+            //     println!("Res: {}", res);            
+            // }
             return (true,res[2])
         } 
         (false, 0.0)

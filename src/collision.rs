@@ -1,6 +1,6 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use nalgebra::{Vector3,geometry::Rotation3};
-use std::time::Instant;
+//use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, config::DroneConfig, map::Map};
 
 const MAP_MODEL_PATH: &str = "rotated_dust.obj";
@@ -46,7 +46,7 @@ impl CollisionDetector
             //droneCorners.push(Vector3::new(0.01, 0.0, 0.0));
 
             while r.load(Ordering::SeqCst) {
-                let start = Instant::now();
+                //let start = Instant::now();
                 let drones_lck = _drones.lock().unwrap();
                 let drones_pos_vel = drones_lck.getPosOriVels();
                 drop(drones_lck);
@@ -67,8 +67,8 @@ impl CollisionDetector
                 Self::ground_objs(&objs_pos_vels, &_objects);
                 //Self::spring_dumper_drone(&drones_pos_vel,&_drones, &rotorsPositions);
        
-                let elapsed = start.elapsed();
-                println!("Collision calc time: {} ms", elapsed.as_millis());
+                //let elapsed = start.elapsed();
+                //println!("Collision calc time: {} ms", elapsed.as_millis());
                 thread::sleep(time::Duration::from_millis(1));
 
             }
