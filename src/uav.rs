@@ -256,7 +256,7 @@ impl UAV
 
         //paintball
         let mass = mass.get_or_insert(0.003);
-        let speed = speed.get_or_insert(00.0);
+        let speed = speed.get_or_insert(90.0);
         let CS = CS.get_or_insert(0.47*0.000126645);
         let r = r.get_or_insert([0.0,0.0,0.1]);
 

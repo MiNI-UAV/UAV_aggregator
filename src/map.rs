@@ -109,6 +109,11 @@ impl Map
         //     println!("Chunk: {} - faces: {}", elem.0, elem.1.len());
         // }
     }
+
+    pub fn getMinMax(&self) -> (Vector3<f32>,Vector3<f32>)
+    {
+        (self._min,self._max)
+    }
 }
 
 struct Obj

@@ -4,6 +4,7 @@ use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, config::DroneConfig, map::Map};
 
 const MAP_MODEL_PATH: &str = "rotated_dust.obj";
+const MAP_OFFSET: f32 = 30.0;
 const COLLISION_PLUS_EPS: f32 = 0.1;
 const COLLISION_MINUS_EPS: f32 = -0.3;
 const COR: f32  = 0.5f32;
@@ -13,14 +14,6 @@ const MI_D: f32  = 0.3f32;
 const PROJECTILE_RADIUS: f32 = 0.5f32;
 
 const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
-
-//BOUNDING BOX
-const BOUNDMAXX: f32 = 200.0;
-const BOUNDMINX: f32 = -200.0;
-const BOUNDMAXY: f32 = 200.0;
-const BOUNDMINY: f32 = -200.0;
-const BOUNDMAXZ: f32 = 200.0;
-const BOUNDMINZ: f32 = -200.0;
 
 //DRONE SPHERES
 const SPHERE_RADIUS: f32 = 0.1;
@@ -38,6 +31,9 @@ impl CollisionDetector
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let map = Map::new(MAP_MODEL_PATH,COLLISION_PLUS_EPS,COLLISION_MINUS_EPS);
+        let (mut box_min, mut box_max) = map.getMinMax();
+        box_min.add_scalar_mut(-MAP_OFFSET);
+        box_max.add_scalar_mut(MAP_OFFSET);
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
@@ -45,7 +41,6 @@ impl CollisionDetector
             let mut droneCorners = Vec::<Vector3<f32>>::with_capacity(rotorsPositions.len()*2);
             droneCorners.extend(rotorsPositions.iter().map(|v| v + Vector3::new(0.0, 0.0, SPHERE_RADIUS)));
             droneCorners.extend(rotorsPositions.iter().map(|v| v + Vector3::new(0.0, 0.0, -SPHERE_RADIUS)));
-            //droneCorners.push(Vector3::new(0.01, 0.0, 0.0));
 
             while r.load(Ordering::SeqCst) {
                 let start = Instant::now();
@@ -60,11 +55,13 @@ impl CollisionDetector
                 //Colision between objects are negligible
                 Self::colisions_between_drones(&drones_pos_vel);
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels);
-                //Self::boundary_box_obj(&objs_pos_vels, &_objects);
+                
                 
                 //Drone collision with map
                 Self::impulse_collision_drone(&drones_pos_vel,&_drones, &droneCorners,&map);
                 Self::impulse_collision_projectiles(&objs_pos_vels,&_objects,&map);
+                //Second box
+                Self::boundary_box_obj(&objs_pos_vels, &_objects, box_min, box_max);
                 
                 //TEST
                 //Self::ground_objs(&objs_pos_vels, &_objects);
@@ -111,23 +108,22 @@ impl CollisionDetector
 
     #[allow(dead_code)]
     fn boundary_box_obj(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
-        objects: &Arc<Mutex<Objects>>)
+        objects: &Arc<Mutex<Objects>>, box_min: Vector3<f32>, box_max: Vector3<f32>)
     {
         let mut objToKill = Vec::new();
-        for obj in objs_pos_vels.iter() 
+        for (id,pos,_) in objs_pos_vels.iter() 
         {
-            if obj.1[0] > BOUNDMAXX || obj.1[1] > BOUNDMAXY || obj.1[2] > BOUNDMAXZ
-                || obj.1[0] < BOUNDMINX || obj.1[1] < BOUNDMINY || obj.1[2] < BOUNDMINZ
+            if box_min.inf(pos) != box_min || box_max.sup(pos) != box_max
             {
-                //println!("Object {} is outside the boundary box", obj.0);
-                objToKill.push(obj.0);
+                println!("Object {} is outside the boundary box", id);
+                objToKill.push(id);
             }
         }
         if !objToKill.is_empty()
         {
             let obj_lck = objects.lock().unwrap();
             for id in objToKill {
-                obj_lck.removeObj(id);
+                obj_lck.removeObj(*id);
             }
             drop(obj_lck);
         }
