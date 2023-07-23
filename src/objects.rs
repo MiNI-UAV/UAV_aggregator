@@ -190,6 +190,28 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    pub fn sendSurfaceCollison(&self,id: usize, COR: f32,
+        mi_s: f32, mi_d: f32, normalVector: &Vector3<f32>)
+    {
+        let mut command = String::with_capacity(30);
+        command.push_str("j:");
+        command.push_str(&id.to_string());
+        command.push(',');
+        command.push_str(&COR.to_string());
+        command.push(',');
+        command.push_str(&mi_s.to_string());
+        command.push(',');
+        command.push_str(&mi_d.to_string());
+        command.push(',');
+        command.push_str(&normalVector[0].to_string());
+        command.push(',');
+        command.push_str(&normalVector[1].to_string());
+        command.push(',');
+        command.push_str(&normalVector[2].to_string());
+        //println!("{}", command);
+        self._sendControlMsg(&command);
+    }
+
     pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::<(usize,Vector3<f32>)>::new();

@@ -38,15 +38,16 @@ impl Map
         map
     }
 
-    pub fn checkWalls(&self, point: Vector3<f32>) -> Vec<Vector3<f32>>
+    pub fn checkWalls(&self, point: Vector3<f32>, radius: f32) -> Vec<Vector3<f32>>
     {
         let mut normalsInColisionPoint = Vec::new();
         let chunk = self.calcChunk(point);
         if let Some(faces) = self.facesInChunk.get(&chunk)
         {
             for face in faces {
-                if let (true, dist) = face.projectPoint(point)
+                if let (true, mut dist) = face.projectPoint(point)
                 {
+                    dist -= radius;
                     if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
                     {
                         normalsInColisionPoint.push(face.normal)

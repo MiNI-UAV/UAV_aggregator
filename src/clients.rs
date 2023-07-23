@@ -2,7 +2,7 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 
 use crate::drones::Drones;
 
-const HB_DISCONNECT: usize = 999;
+const HB_DISCONNECT: usize = 3;
 
 pub struct Clients
 {

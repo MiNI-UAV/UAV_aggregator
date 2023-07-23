@@ -1,6 +1,6 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use nalgebra::{Vector3,geometry::Rotation3};
-//use std::time::Instant;
+use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, config::DroneConfig, map::Map};
 
 const MAP_MODEL_PATH: &str = "rotated_dust.obj";
@@ -9,6 +9,8 @@ const COLLISION_MINUS_EPS: f32 = -0.3;
 const COR: f32  = 0.5f32;
 const MI_S: f32  = 0.4f32;
 const MI_D: f32  = 0.3f32;
+
+const PROJECTILE_RADIUS: f32 = 0.5f32;
 
 const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
 
@@ -46,7 +48,7 @@ impl CollisionDetector
             //droneCorners.push(Vector3::new(0.01, 0.0, 0.0));
 
             while r.load(Ordering::SeqCst) {
-                //let start = Instant::now();
+                let start = Instant::now();
                 let drones_lck = _drones.lock().unwrap();
                 let drones_pos_vel = drones_lck.getPosOriVels();
                 drop(drones_lck);
@@ -58,16 +60,18 @@ impl CollisionDetector
                 //Colision between objects are negligible
                 Self::colisions_between_drones(&drones_pos_vel);
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels);
-                Self::boundary_box_obj(&objs_pos_vels, &_objects);
+                //Self::boundary_box_obj(&objs_pos_vels, &_objects);
                 
                 //Drone collision with map
-                Self::impulse_collision(&drones_pos_vel,&_drones, &droneCorners,&map);
+                Self::impulse_collision_drone(&drones_pos_vel,&_drones, &droneCorners,&map);
+                Self::impulse_collision_projectiles(&objs_pos_vels,&_objects,&map);
                 
                 //TEST
-                Self::ground_objs(&objs_pos_vels, &_objects);
+                //Self::ground_objs(&objs_pos_vels, &_objects);
                 //Self::spring_dumper_drone(&drones_pos_vel,&_drones, &rotorsPositions);
-       
-                //let elapsed = start.elapsed();
+                
+                #[allow(unused_variables)]
+                let elapsed = start.elapsed();
                 //println!("Collision calc time: {} ms", elapsed.as_millis());
                 thread::sleep(time::Duration::from_millis(1));
 
@@ -99,12 +103,13 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < MINIMAL_DISTANCE2
                 {
-                    println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
+                    //println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }
         }
     }
 
+    #[allow(dead_code)]
     fn boundary_box_obj(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
         objects: &Arc<Mutex<Objects>>)
     {
@@ -167,6 +172,7 @@ impl CollisionDetector
         }
     }
 
+    #[allow(dead_code)]
     fn ground_objs(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
         objects: &Arc<Mutex<Objects>>)
     {
@@ -191,7 +197,27 @@ impl CollisionDetector
         }
     }
 
-    fn impulse_collision(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
+    fn impulse_collision_projectiles(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
+    objects: &Arc<Mutex<Objects>>, map: &Map)
+    {
+        let mut collisionsToSend = Vec::<(usize, Vector3<f32>)>::new();
+
+        //For every drone
+        for (id, pos, _) in objs_pos_vels.iter()
+        {
+            collisionsToSend.extend(map.checkWalls(*pos,PROJECTILE_RADIUS).iter().map(|n| (*id,n.clone())));
+        }
+        if !collisionsToSend.is_empty()
+        {
+            let objects_lck = objects.lock().unwrap();
+            for (id, normalVector) in &collisionsToSend {
+                objects_lck.sendSurfaceCollison(*id, COR, MI_S, MI_D, normalVector);
+            }
+            drop(objects_lck);
+        }
+    }
+
+    fn impulse_collision_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
         drones: &Arc<Mutex<Drones>>, drone_corners: &Vec<Vector3<f32>>, map: &Map)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
@@ -203,7 +229,7 @@ impl CollisionDetector
             for point in drone_corners.iter()
             .map(|r| Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos)
             {  
-                collisionsToSend.extend(map.checkWalls(point).iter().map(|n| (*id,point,n.clone())));
+                collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
             }
         }
         if !collisionsToSend.is_empty()
