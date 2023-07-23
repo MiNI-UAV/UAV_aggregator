@@ -10,7 +10,7 @@ pub struct Drones
     pub drones: Arc<Mutex<Vec<UAV>>>,
     objects: Arc<Mutex<Objects>>,
     _state_publisher: Option<thread::JoinHandle<()>>,
-    nextID: usize
+    nextID: usize,
 }
 
 impl Drones
@@ -45,7 +45,8 @@ impl Drones
                 thread::sleep(time::Duration::from_millis(10));
             }
         });
-        Drones {ctx: _ctx, running: running, drones: drones, objects: objects, _state_publisher: Some(publisher), nextID: 0}
+        Drones {ctx: _ctx, running: running, drones: drones, objects: objects,
+             _state_publisher: Some(publisher), nextID: 0}
     }
 
     pub fn startUAV(&mut self, name: &str) -> (usize,String)

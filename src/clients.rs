@@ -1,6 +1,8 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet};
 
-use crate::drones::Drones;
+use nalgebra::Vector3;
+
+use crate::{drones::Drones, cargo::Cargo};
 
 const HB_DISCONNECT: usize = 3;
 
@@ -14,7 +16,7 @@ pub struct Clients
 
 impl Clients
 {
-    pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>) -> Self {
+    pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>, cargo: Arc<Mutex<Cargo>>) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let mut next_port = 10000;
@@ -77,6 +79,7 @@ impl Clients
                 let mut control = c.lock().unwrap();
                 let r2 = r.clone();
                 let d2 = drones.clone();
+                let c2 = cargo.clone();
                 control.push(Some(
                     thread::spawn(move ||
                     {
@@ -100,7 +103,9 @@ impl Clients
                                 continue;
                             }
                             let mut d_lck = d2.lock().unwrap();
-                            Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut skipedHeartbeats);
+                            let mut cargo_lck = c2.lock().unwrap();
+                            Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
+                            drop(cargo_lck);
                             drop(d_lck);
                         }
                     })
@@ -121,7 +126,7 @@ impl Clients
         Clients{running: running, _proxies: proxies, _control: control, _replyer: Some(replyer)}
     }
 
-    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones,  skipedHeartbeats: &mut usize)
+    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize)
     {
         let mut d = drones.drones.lock().unwrap();
         if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
@@ -132,6 +137,13 @@ impl Clients
                 }
                 "shot" => {  
                     drone.dropOrShot(None, None, None, None);
+                }
+                "drop" => {
+                    let id = drone.dropOrShot(Some(0.2), Some(0.0), Some(0.002), None);
+                    if id >= 0
+                    {
+                        cargo.addLink(drone_no, id as usize, 2.0, 5.0, Vector3::zeros());
+                    }
                 }
                 "kill" => {  
                     d.retain_mut(|d| d.id != drone_no);
