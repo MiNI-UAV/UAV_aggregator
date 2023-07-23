@@ -4,8 +4,6 @@ use std::{time, thread, sync::{Mutex, Arc}};
 use std::sync::atomic::{AtomicBool, Ordering};
 use device_query::{DeviceEvents, DeviceState};
 
-
-
 pub mod clients;
 pub mod drones;
 pub mod uav;
@@ -14,6 +12,7 @@ pub mod collision;
 pub mod objects;
 pub mod config;
 pub mod map;
+pub mod cargo;
 
 fn main() {
     let drone_config = Arc::new(config::DroneConfig::parse("config.xml").expect("Config file error"));
@@ -40,7 +39,9 @@ fn main() {
 
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
-    let _clients = clients::Clients::new(ctx.clone(),_drones.clone()); 
+    let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone())));
+    let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());
+
     let _wind = wind::Wind::new(_drones.clone(),_objects.clone());
     let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone(),drone_config.clone());
 
@@ -56,6 +57,7 @@ fn main() {
     drop(_colision_detector);
     drop(_wind);
     drop(_clients);
+    drop(_cargo);
     drop(_drones);
     drop(_objects);
     drop(ctx);

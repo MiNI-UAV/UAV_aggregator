@@ -131,7 +131,7 @@ impl Objects
         rep.to_string()
     }
 
-    pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>)
+    pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>) -> isize
     {
         let mut command = String::with_capacity(60);
         command.push_str("a:");
@@ -150,7 +150,8 @@ impl Objects
         command.push_str(&vel[1].to_string());
         command.push(',');
         command.push_str(&vel[2].to_string());
-        self._sendControlMsg(&command);
+        let rep = self._sendControlMsg(&command);
+        rep.split(';').skip(1).next().get_or_insert("-1").parse::<isize>().unwrap()
     }
 
     pub fn removeObj(&self, id: usize)

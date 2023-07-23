@@ -246,7 +246,7 @@ impl UAV
     }
 
 
-    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>)
+    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>) -> isize
     {
         //9mm bullet
         // let mass = mass.get_or_insert(0.008);
@@ -281,8 +281,9 @@ impl UAV
         let pos = state.getPos3();
         drop(state);
         let objects = self.objects_arc.lock().unwrap();
-        objects.addObj(*mass, *CS, pos, vel);
+        let id = objects.addObj(*mass, *CS, pos, vel);
         drop(objects);
+        id
     }
 
     pub fn sendSurfaceCollison(&self, COR: f32, mi_s: f32, mi_d: f32,
