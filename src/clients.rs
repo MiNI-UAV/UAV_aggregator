@@ -139,7 +139,8 @@ impl Clients
                     drone.dropOrShot(None, None, None, None);
                 }
                 "drop" => {
-                    let id = drone.dropOrShot(Some(0.2), Some(0.0), Some(0.002), None);
+                    // 20cm ball
+                    let id = drone.dropOrShot(Some(0.2), Some(0.0), Some(0.015), None);
                     if id >= 0
                     {
                         cargo.addLink(drone_no, id as usize, 2.0, 5.0, Vector3::zeros());
