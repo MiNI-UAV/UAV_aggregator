@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Matrix3xX};
 use crate::uav::{UAV,DroneState};
 use crate::objects::Objects;
 
@@ -49,13 +49,13 @@ impl Drones
              _state_publisher: Some(publisher), nextID: 0}
     }
 
-    pub fn startUAV(&mut self, name: &str) -> (usize,String)
+    pub fn startUAV(&mut self, name: &str, config_path: &str) -> (usize,String)
     {
         let state = Arc::new(Mutex::new(DroneState::new()));
         let mut drone = self.drones.lock().unwrap();
         let id = self.nextID;
         self.nextID += 1;
-        drone.push(UAV::new(&mut self.ctx,id, name,state,self.objects.clone()));
+        drone.push(UAV::new(&mut self.ctx,id, name, config_path, state,self.objects.clone()));
         drop(drone);
         (id,format!("ipc:///tmp/{}/steer", name))
     }
@@ -111,6 +111,20 @@ impl Drones
         }
         drop(drone);
         pos
+    }
+
+    pub fn getRotorPos(&self) -> Vec<Matrix3xX<f32>>
+    {
+        let mut rotor_pos = Vec::<Matrix3xX<f32>>::new();
+        let drone = self.drones.lock().unwrap();
+        if !drone.is_empty()
+        {
+            for elem in drone.iter()  {
+                rotor_pos.push(elem.config.rotors.positions.clone());
+            }
+        }
+        drop(drone);
+        rotor_pos
     }
 
     pub fn updateForce(&self, id: &usize, force: &Vector3<f32>, torque: &Vector3<f32>)

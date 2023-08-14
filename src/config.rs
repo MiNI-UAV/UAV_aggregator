@@ -1,8 +1,9 @@
 use std::fs::File;
 use std::io::Read;
 use xmltree::Element;
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Matrix3xX};
 
+#[derive(Clone)]
 pub struct DroneConfig {
     pub name: String,
     pub mass: f32,
@@ -14,6 +15,7 @@ pub struct DroneConfig {
     pub mixer: Vec<f32>,
 }
 
+#[derive(Clone)]
 pub struct Inertia {
     pub mass: f32,
     pub ix: f32,
@@ -24,21 +26,24 @@ pub struct Inertia {
     pub iyz: f32,
 }
 
+#[derive(Clone)]
 pub struct Rotors {
     pub num: u32,
     pub force_coeff: f32,
     pub torque_coeff: f32,
-    pub positions: Vec<Vector3<f32>>,
+    pub positions: Matrix3xX<f32>,
     pub direction: Vec<i32>,
     pub time_constants: Vec<f32>,
 }
 
+#[derive(Clone)]
 pub struct Aero {
     pub s: f32,
     pub d: f32,
     pub c: Vec<f32>,
 }
 
+#[derive(Clone)]
 pub struct PID {
     pub x: AxisPID,
     pub y: AxisPID,
@@ -54,6 +59,7 @@ pub struct PID {
     pub yaw: AxisPID,
 }
 
+#[derive(Clone)]
 pub struct AxisPID {
     pub p: f32,
     pub i: f32,
@@ -62,6 +68,7 @@ pub struct AxisPID {
     pub max: f32,
 }
 
+#[derive(Clone)]
 pub struct Control {
     pub max_speed: f32,
     pub hover_speed: f32,
@@ -124,9 +131,12 @@ fn parse_rotors(rotors_elem: &Element) -> Rotors {
                 .map(|value| value.parse().unwrap())
                 .collect();
             Vector3::<f32>::from_vec(values)
-        })
-        .collect();
-
+        });
+    let mut posistion_matrix = Matrix3xX::<f32>::zeros(positions.len());
+    for (i,elem) in positions.enumerate()    
+    {
+        posistion_matrix.column_mut(i).copy_from(&elem);
+    }
     let direction = rotors_elem
         .get_child("direction")
         .unwrap()
@@ -147,7 +157,7 @@ fn parse_rotors(rotors_elem: &Element) -> Rotors {
         num,
         force_coeff,
         torque_coeff,
-        positions,
+        positions: posistion_matrix,
         direction,
         time_constants,
     }
