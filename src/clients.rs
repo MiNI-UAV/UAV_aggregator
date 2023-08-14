@@ -140,7 +140,8 @@ impl Clients
                 },
                 'c' => {
                     let mut command = request[2..].splitn(2,';');
-                    let mut file_name = command.next().unwrap().to_string();
+                    let mut file_name = "configs/".to_string();
+                    file_name.push_str(command.next().unwrap());
                     file_name.push_str(".xml");
                     let file_content = command.next().unwrap().to_string();
                     let mut file = File::create(file_name).unwrap();
