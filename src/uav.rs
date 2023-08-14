@@ -86,14 +86,14 @@ impl UAV
             objects_arc: objects,
 
             simulation: Command::new("../UAV_physics_engine/build/uav")
-            .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
+            .arg("-c").arg("config.xml")
             .arg("-n").arg(name)
             .stdout(Stdio::null())
             .spawn()
             .expect("failed to execute simulation process"),
 
             controller: Command::new("../UAV_controller/build/controller")
-            .arg("-c").arg("/home/wgajda/Desktop/Development/UAV/UAV_aggregator/config.xml")
+            .arg("-c").arg("config.xml")
             .arg("-n").arg(name)
             .stdout(Stdio::null())
             .spawn()
