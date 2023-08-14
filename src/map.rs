@@ -1,10 +1,8 @@
-use nalgebra::{Vector3, Matrix3,convert};
+use nalgebra::{Vector3, Matrix3};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::collections::{HashMap,HashSet};
 use std::hash::{Hash, Hasher};
-
-const GRID: Vector3<usize> = Vector3::new(20,20,5);
 
 pub struct Map
 {
@@ -14,17 +12,23 @@ pub struct Map
     _step: Vector3<f32>,
     facesInChunk: HashMap<Vector3<usize>,HashSet<Face>>,
 
-    collisionPlusEps: f32,
-    collisionMinusEps: f32
+    pub collisionPlusEps: f32,
+    pub collisionMinusEps: f32,
+    pub sphereRadius: f32,
+    pub projectileRadius: f32,
+    pub COR: f32,
+    pub mi_s: f32,
+    pub mi_d: f32,
+    pub minimalDist: f32
 }
 
 impl Map
 {
-    pub fn new(path: &str, collisionPlusEps: f32, collisionMinusEps: f32) -> Self
+    pub fn new(path: &str, collisionPlusEps: f32, collisionMinusEps: f32, grid: Vector3<f32>,
+        sphereRadius: f32, projectileRadius: f32, COR: f32, mi_s: f32, mi_d: f32, minimalDist: f32) -> Self
     {
         let walls = Obj::from_file(path);
         let (min,max) = walls.boundingBox();
-        let grid: Vector3<f32> = convert(GRID);
         let step = (max-min).component_div(&grid);
 
         println!("Min: {} Max: {}", min,max);
@@ -33,7 +37,14 @@ impl Map
         let facesInChunk =  HashMap::<Vector3<usize>,HashSet<Face>>::new();
 
         let mut map = Map{_walls: walls, _min: min, _max: max, _step: step,
-            facesInChunk, collisionPlusEps, collisionMinusEps};
+            facesInChunk, collisionPlusEps, collisionMinusEps,
+            sphereRadius,
+            projectileRadius,
+            COR,
+            mi_s,
+            mi_d,
+            minimalDist
+        };
         map.insertFace();
         map
     }

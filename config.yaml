@@ -1,0 +1,21 @@
+#map
+map: de_dust2
+map_offset: 30
+
+#collisions
+grid: 20, 20, 3
+collisionPlusEps: 0.1
+collisionMinusEps: 0.3
+sphereRadius: 0.1
+projectileRadius: 0.5
+COR: 0.5
+mi_s: 0.4
+mi_d: 0.3
+minimalDist: 1.0
+timeout_limit: 10
+
+q_exit: false
+hb_disconnect: 3
+notification_port: 8000
+replyer_port: 9000
+next_port: 10000

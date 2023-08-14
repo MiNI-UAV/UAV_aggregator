@@ -3,9 +3,7 @@ use nalgebra::Vector3;
 use std::fs::File;
 use std::path::Path;
 
-use crate::{drones::Drones, cargo::Cargo};
-
-const HB_DISCONNECT: usize = 3;
+use crate::{drones::Drones, cargo::Cargo, config::ServerConfig};
 
 pub struct Clients
 {
@@ -18,9 +16,13 @@ pub struct Clients
 impl Clients
 {
     pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>, cargo: Arc<Mutex<Cargo>>) -> Self {
+        let configuration = ServerConfig::new();
+        let hb_disconnect: usize = configuration.data["hb_disconnect"].as_u64().unwrap() as usize;
+        let replyer_port: usize = *configuration.data["replyer_port"].as_u64().get_or_insert(9000u64) as usize;
+        let mut next_port: usize = *configuration.data["next_port"].as_u64().get_or_insert(10000u64) as usize;
+        
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
-        let mut next_port = 10000;
         let replyer_socket = _ctx.socket(zmq::REP).expect("REP socket error");
         let mut taken_name =  HashSet::<String>::new();
         let proxies = Arc::new(Mutex::new(Vec::<Option::<JoinHandle<()>>>::new()));
@@ -30,8 +32,8 @@ impl Clients
         let replyer: JoinHandle<()> = thread::spawn(move ||
         {
             replyer_socket.set_rcvtimeo(1000).unwrap();
-            replyer_socket.bind("tcp://*:9000").expect("Bind error tcp 9000");
-            println!("Replyer started on TCP: {}", 9000);
+            replyer_socket.bind(format!("tcp://*:{}",replyer_port).as_str()).expect(format!("Bind error tcp {}",replyer_port).as_str());
+            println!("Replyer started on TCP: {}", replyer_port);
             while r.load(Ordering::SeqCst) {
                 let mut request =  zmq::Message::new();
                 if let Err(_) = replyer_socket.recv(&mut request, 0)
@@ -109,7 +111,7 @@ impl Clients
                                 if let Err(_) = control_pair_socket.recv(&mut request, 0)
                                 {
                                     skipedHeartbeats += 1;
-                                    if skipedHeartbeats == HB_DISCONNECT
+                                    if skipedHeartbeats == hb_disconnect
                                     {
                                         let mut d_lck = d2.lock().unwrap();
                                         local_running = false;

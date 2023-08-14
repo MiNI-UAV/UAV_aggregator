@@ -3,6 +3,24 @@ use std::io::Read;
 use xmltree::Element;
 use nalgebra::{Vector3, Matrix3xX};
 
+const CONFIG_FILE_NAME: &str = "config.yaml";
+
+pub struct ServerConfig
+{
+    pub data: serde_yaml::Value
+}
+
+impl ServerConfig {
+    pub fn new() -> Self
+    {
+        let f = std::fs::File::open(CONFIG_FILE_NAME).unwrap();
+        ServerConfig
+        {
+            data: serde_yaml::from_reader(f).unwrap()
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct DroneConfig {
     pub name: String,

@@ -1,39 +1,51 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use nalgebra::{Vector3,geometry::Rotation3, Matrix3xX};
 use std::time::Instant;
-use crate::{drones::Drones, objects::Objects, map::Map};
-
-const MAP_MODEL_PATH: &str = "rotated_dust.obj";
-const MAP_OFFSET: f32 = 30.0;
-const COLLISION_PLUS_EPS: f32 = 0.1;
-const COLLISION_MINUS_EPS: f32 = -0.3;
-const COR: f32  = 0.5f32;
-const MI_S: f32  = 0.4f32;
-const MI_D: f32  = 0.3f32;
-
-const PROJECTILE_RADIUS: f32 = 0.5f32;
-
-const MINIMAL_DISTANCE2: f32 = 1.0 * 1.0;
-
-//DRONE SPHERES
-const SPHERE_RADIUS: f32 = 0.1;
+use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig};
 
 pub struct CollisionDetector
 {
     running: Arc<AtomicBool>,
-    collision_checker: Option<thread::JoinHandle<()>>
+    collision_checker: Option<thread::JoinHandle<()>>,
 }
 
 impl CollisionDetector
 {
     pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
+        let configuration = ServerConfig::new();
+        let map_offset = configuration.data["map_offset"].as_f64().unwrap() as f32;
+        let mut map_path = "assets/maps/".to_string();
+        map_path.push_str(configuration.data["map"].as_str().unwrap());
+        map_path.push_str("/map.obj");
+
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
-        let map = Map::new(MAP_MODEL_PATH,COLLISION_PLUS_EPS,COLLISION_MINUS_EPS);
+
+        let grid = configuration.data["grid"].as_str().unwrap().split(',')
+        .map(|component| component.trim().parse())
+        .collect::<Result<Vec<f32>, _>>()
+        .map(|components| {
+            if components.len() != 3 {
+                panic!("Input does not have three components.");
+            }
+            Vector3::new(components[0], components[1], components[2])
+        }).unwrap();
+
+        let map = Map::new(&map_path,
+            configuration.data["collisionPlusEps"].as_f64().unwrap() as f32,
+            configuration.data["collisionMinusEps"].as_f64().unwrap()as f32,
+            grid,
+            configuration.data["sphereRadius"].as_f64().unwrap() as f32,
+            configuration.data["projectileRadius"].as_f64().unwrap() as f32,
+            configuration.data["COR"].as_f64().unwrap() as f32,
+            configuration.data["mi_s"].as_f64().unwrap() as f32,
+            configuration.data["mi_d"].as_f64().unwrap() as f32,
+            configuration.data["minimalDist"].as_f64().unwrap() as f32,
+        );
         let (mut box_min, mut box_max) = map.getMinMax();
-        box_min.add_scalar_mut(-MAP_OFFSET);
-        box_max.add_scalar_mut(MAP_OFFSET);
+        box_min.add_scalar_mut(-map_offset);
+        box_max.add_scalar_mut(map_offset);
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
@@ -49,8 +61,8 @@ impl CollisionDetector
                 drop(obj_lck);
                 
                 //Colision between objects are negligible
-                Self::colisions_between_drones(&drones_pos_vel);
-                Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels);
+                Self::colisions_between_drones(&drones_pos_vel,map.minimalDist);
+                Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels,map.minimalDist);
                 
                 
                 //Drone collision with map
@@ -70,17 +82,19 @@ impl CollisionDetector
 
             }
         });
-        CollisionDetector {running, collision_checker: Some(collision_checker)}
+        CollisionDetector {running,
+             collision_checker: Some(collision_checker),
+            }
     }
 
-    fn colisions_between_drones(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>)
+    fn colisions_between_drones(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>, minimal_dist: f32)
     {
         for i in 0..drones_pos_vel.len() {
             for j in (i+1)..drones_pos_vel.len() {
                 let obj1 = drones_pos_vel.get(i).unwrap();
                 let obj2 = drones_pos_vel.get(j).unwrap();
                 let dist: Vector3<f32> = obj1.1-obj2.1;
-                if dist.dot(&dist).abs() < MINIMAL_DISTANCE2
+                if dist.dot(&dist).abs() < minimal_dist
                 {
                     println!("Collision detected between drone {} and {}", obj1.0,obj2.0);
                 }
@@ -89,12 +103,12 @@ impl CollisionDetector
     }
 
     fn colisions_drones_obj(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
-        objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>)
+        objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>, minimal_dist: f32)
     {
         for obj1 in drones_pos_vel.iter() {
             for obj2 in objs_pos_vels.iter() {
                 let dist: Vector3<f32> = obj1.1-obj2.1;
-                if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < MINIMAL_DISTANCE2
+                if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < minimal_dist
                 {
                     //println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
@@ -128,7 +142,7 @@ impl CollisionDetector
 
     #[allow(dead_code)]
     fn spring_dumper_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>, rotorPos: &Vec<Vector3<f32>>)
+        drones: &Arc<Mutex<Drones>>, rotorPos: &Vec<Vector3<f32>>, map: &Map)
     {
         let k = 0.4f32;
         let b = 0.2f32;
@@ -144,10 +158,10 @@ impl CollisionDetector
             let mut torqueSum = Vector3::<f32>::zeros();
             for (r, pos,vel) in worldPosVel
             {
-                if pos[2] + SPHERE_RADIUS > 10.0
+                if pos[2] + map.sphereRadius > 10.0
                 {
                     let mut force = Vector3::<f32>::zeros();
-                    force[2] = -k*(pos[2] + SPHERE_RADIUS) - b*vel[2];
+                    force[2] = -k*(pos[2] + map.sphereRadius) - b*vel[2];
                     forceSum += force;
                     torqueSum += r.cross(&force);
                 }
@@ -197,13 +211,13 @@ impl CollisionDetector
         //For every drone
         for (id, pos, _) in objs_pos_vels.iter()
         {
-            collisionsToSend.extend(map.checkWalls(*pos,PROJECTILE_RADIUS).iter().map(|n| (*id,n.clone())));
+            collisionsToSend.extend(map.checkWalls(*pos,map.projectileRadius).iter().map(|n| (*id,n.clone())));
         }
         if !collisionsToSend.is_empty()
         {
             let objects_lck = objects.lock().unwrap();
             for (id, normalVector) in &collisionsToSend {
-                objects_lck.sendSurfaceCollison(*id, COR, MI_S, MI_D, normalVector);
+                objects_lck.sendSurfaceCollison(*id, map.COR, map.mi_s, map.mi_d, normalVector);
             }
             drop(objects_lck);
         }
@@ -213,7 +227,7 @@ impl CollisionDetector
         drones: &Arc<Mutex<Drones>>, drones_rotor_pos: &Vec<Matrix3xX<f32>>, map: &Map)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
-        let offset: nalgebra::Matrix<f32, nalgebra::Const<3>, nalgebra::Const<1>, nalgebra::ArrayStorage<f32, 3, 1>> = Vector3::new(0.0,0.0,SPHERE_RADIUS);
+        let offset: nalgebra::Matrix<f32, nalgebra::Const<3>, nalgebra::Const<1>, nalgebra::ArrayStorage<f32, 3, 1>> = Vector3::new(0.0,0.0,map.sphereRadius);
         //For every drone
         for ((id, pos, ori, _, _),rotor_pos) in objs_pos_vels.iter().zip(drones_rotor_pos.iter())
         {
@@ -233,7 +247,7 @@ impl CollisionDetector
         {
             let drones_lck = drones.lock().unwrap();
             for (id,colisionPoint, normalVector) in &collisionsToSend {
-                drones_lck.sendSurfaceCollison(id, COR, MI_S, MI_D, colisionPoint, normalVector);
+                drones_lck.sendSurfaceCollison(id, map.COR, map.mi_s, map.mi_d, colisionPoint, normalVector);
             }
             drop(drones_lck);
         }
