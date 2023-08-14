@@ -15,28 +15,33 @@ pub mod map;
 pub mod cargo;
 pub mod notification;
 
+const Q_EXIT: bool  = false;
+
 fn main() {
     let drone_config = Arc::new(config::DroneConfig::parse("config.xml").expect("Config file error"));
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
-    let r2 = running.clone();
 
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
+
+    if Q_EXIT
+    {
+        let device_state = DeviceState::new();
+        let r2 = running.clone();
+        let _guardQ = device_state.on_key_down(move |key| {
+        if key.eq(&device_query::Keycode::Q)
+        {
+            r2.store(false, Ordering::SeqCst);
+        }
+        });
+    }
+    
     let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
     stopSocket.bind("inproc://stop").unwrap();
 
-    let device_state = DeviceState::new();
-
-    let _guardQ = device_state.on_key_down(move |key| {
-        if key.eq(&device_query::Keycode::Q)
-        {
-            r.store(false, Ordering::SeqCst);
-        }
-     });
-
-    ctrlc::set_handler(move || {
-        r2.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
     let _notifications = Arc::new(notification::Notification::new(ctx.clone()));
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
