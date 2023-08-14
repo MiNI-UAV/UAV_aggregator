@@ -1,6 +1,7 @@
-use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet};
-
+use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet, io::Write};
 use nalgebra::Vector3;
+use std::fs::File;
+use std::path::Path;
 
 use crate::{drones::Drones, cargo::Cargo};
 
@@ -37,90 +38,118 @@ impl Clients
                 {
                     continue;
                 }
-                let mut drone_name = request.as_str().unwrap().to_string();
-                if drone_name.is_empty(){
-                    let mut reply = String::new();
-                    reply.push_str("-1");
-                    replyer_socket.send(&reply, 0).unwrap(); 
-                    continue;
-                }
-                let no = taken_name.iter().map(|name|  if name.contains(&drone_name) {1} else {0}).count();
-                if no > 0
-                {
-                    drone_name.push('_');
-                    drone_name.push_str(&no.to_string());
-                }
-                taken_name.insert(drone_name.to_string());
-                let mut drones_lck = drones.lock().unwrap();
-                let (drone_no,uav_address) = drones_lck.startUAV(&drone_name);
-                drop(drones_lck);
-                println!("Started new drone with name: {}", drone_name);
-                let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
-                let address = format!("tcp://*:{}", next_port);
-                steer_pair_socket.bind(&address).unwrap();
-                let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
-                steer_xpub_socket.connect(&uav_address).unwrap();
-                let mut stop_sub_socket = _ctx.socket(zmq::SUB).unwrap();
-                stop_sub_socket.set_subscribe(b"").unwrap();
-                stop_sub_socket.connect("inproc://stop").unwrap();
-                let mut proxy = p.lock().unwrap();
-                proxy.push(Some(
-                    thread::spawn(move ||
+                let request = request.as_str().unwrap().to_string();
+                match request.chars().next().unwrap(){
+                    's' => {
+                    let mut command = request[2..].splitn(2,';');
+                    let mut drone_name = command.next().unwrap().to_owned();
+                    let config_name = command.next().get_or_insert("config").to_owned();
+                    let mut config_path = "configs/".to_string();
+                    config_path.push_str(&config_name);
+                    config_path.push_str(".xml");
+                    if drone_name.is_empty(){
+                        let mut reply = String::new();
+                        reply.push_str("-1");
+                        replyer_socket.send(&reply, 0).unwrap(); 
+                        continue;
+                    }
+                    if !Path::new(&config_path).exists()
                     {
-                        zmq::proxy_steerable(&mut steer_pair_socket, &mut steer_xpub_socket,&mut stop_sub_socket).expect("Proxy err");
-                        println!("Closing client proxy");
-
-                    }))
-                );
-                drop(proxy);
-                println!("Ready to connect steer client on TCP: {}", next_port);
-
-                let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
-                let mut control = c.lock().unwrap();
-                let r2 = r.clone();
-                let d2 = drones.clone();
-                let c2 = cargo.clone();
-                control.push(Some(
-                    thread::spawn(move ||
+                        let mut reply = String::new();
+                        reply.push_str("-2");
+                        replyer_socket.send(&reply, 0).unwrap(); 
+                        continue;
+                    }
+                    let no = taken_name.iter().map(|name|  if name.contains(&drone_name) {1} else {0}).count();
+                    if no > 0
                     {
-                        let mut skipedHeartbeats: usize = 0;
-                        let mut local_running = true;
-                        control_pair_socket.set_rcvtimeo(1000).unwrap();
-                        let address = format!("tcp://*:{}", next_port+1000);
-                        control_pair_socket.bind(&address).unwrap();
-                        while r2.load(Ordering::SeqCst) && local_running {
-                            let mut request =  zmq::Message::new();
-                            if let Err(_) = control_pair_socket.recv(&mut request, 0)
-                            {
-                                skipedHeartbeats += 1;
-                                if skipedHeartbeats == HB_DISCONNECT
+                        drone_name.push('_');
+                        drone_name.push_str(&no.to_string());
+                    }
+                    taken_name.insert(drone_name.to_string());
+                    let mut drones_lck = drones.lock().unwrap();
+                    let (drone_no,uav_address) = drones_lck.startUAV(&drone_name,&config_path);
+                    drop(drones_lck);
+                    println!("Started new drone with name: {}", drone_name);
+                    let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
+                    let address = format!("tcp://*:{}", next_port);
+                    steer_pair_socket.bind(&address).unwrap();
+                    let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
+                    steer_xpub_socket.connect(&uav_address).unwrap();
+                    let mut stop_sub_socket = _ctx.socket(zmq::SUB).unwrap();
+                    stop_sub_socket.set_subscribe(b"").unwrap();
+                    stop_sub_socket.connect("inproc://stop").unwrap();
+                    let mut proxy = p.lock().unwrap();
+                    proxy.push(Some(
+                        thread::spawn(move ||
+                        {
+                            zmq::proxy_steerable(&mut steer_pair_socket, &mut steer_xpub_socket,&mut stop_sub_socket).expect("Proxy err");
+                            println!("Closing client proxy");
+
+                        }))
+                    );
+                    drop(proxy);
+                    println!("Ready to connect steer client on TCP: {}", next_port);
+
+                    let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
+                    let mut control = c.lock().unwrap();
+                    let r2 = r.clone();
+                    let d2 = drones.clone();
+                    let c2 = cargo.clone();
+                    control.push(Some(
+                        thread::spawn(move ||
+                        {
+                            let mut skipedHeartbeats: usize = 0;
+                            let mut local_running = true;
+                            control_pair_socket.set_rcvtimeo(1000).unwrap();
+                            let address = format!("tcp://*:{}", next_port+1000);
+                            control_pair_socket.bind(&address).unwrap();
+                            while r2.load(Ordering::SeqCst) && local_running {
+                                let mut request =  zmq::Message::new();
+                                if let Err(_) = control_pair_socket.recv(&mut request, 0)
                                 {
-                                    let mut d_lck = d2.lock().unwrap();
-                                    local_running = false;
-                                    d_lck.removeUAV(drone_no);
-                                    drop(d_lck);
+                                    skipedHeartbeats += 1;
+                                    if skipedHeartbeats == HB_DISCONNECT
+                                    {
+                                        let mut d_lck = d2.lock().unwrap();
+                                        local_running = false;
+                                        d_lck.removeUAV(drone_no);
+                                        drop(d_lck);
+                                    }
+                                    continue;
                                 }
-                                continue;
+                                let mut d_lck = d2.lock().unwrap();
+                                let mut cargo_lck = c2.lock().unwrap();
+                                Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
+                                drop(cargo_lck);
+                                drop(d_lck);
                             }
-                            let mut d_lck = d2.lock().unwrap();
-                            let mut cargo_lck = c2.lock().unwrap();
-                            Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
-                            drop(cargo_lck);
-                            drop(d_lck);
-                        }
-                    })
-                ));
-                drop(control);
-                println!("Ready to connect control client on TCP: {}", next_port+1000);
+                        })
+                    ));
+                    drop(control);
+                    println!("Ready to connect control client on TCP: {}", next_port+1000);
 
-                let mut reply = String::with_capacity(30);
-                reply.push_str(&drone_no.to_string());
-                reply.push(',');
-                reply.push_str(&next_port.to_string());
-                reply.push(',');
-                reply.push_str(&(next_port+1000).to_string());
-                replyer_socket.send(&reply, 0).unwrap();
-                next_port = next_port + 1;
+                    let mut reply = String::with_capacity(30);
+                    reply.push_str(&drone_no.to_string());
+                    reply.push(',');
+                    reply.push_str(&next_port.to_string());
+                    reply.push(',');
+                    reply.push_str(&(next_port+1000).to_string());
+                    replyer_socket.send(&reply, 0).unwrap();
+                    next_port = next_port + 1;
+                },
+                'c' => {
+                    let mut command = request[2..].splitn(2,';');
+                    let mut file_name = command.next().unwrap().to_string();
+                    file_name.push_str(".xml");
+                    let file_content = command.next().unwrap().to_string();
+                    let mut file = File::create(file_name).unwrap();
+                    file.write_all(file_content.as_bytes()).expect("Unable to write config");
+                    drop(file);
+                    replyer_socket.send("ok", 0).unwrap();
+                },
+                _ => println!("Unknown command: {}", request)
+            }
             }
         });
         Clients{running: running, _proxies: proxies, _control: control, _replyer: Some(replyer)}

@@ -1,6 +1,7 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
 use nalgebra::{Vector3,Vector6};
 use crate::objects::Objects;
+use crate::config::DroneConfig;
 
 pub struct DroneState
 {
@@ -63,6 +64,7 @@ pub struct UAV
     pub id: usize,
     pub name: String,
     pub state_arc: Arc<Mutex<DroneState>>,
+    pub config : DroneConfig,
 
     objects_arc: Arc<Mutex<Objects>>,  
     simulation: Child,
@@ -74,26 +76,29 @@ pub struct UAV
 
 impl UAV
 {
-    pub fn new(_ctx: &mut zmq::Context,id : usize , name: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
+    pub fn new(_ctx: &mut zmq::Context,id : usize , name: &str, config_path: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
+        let config = DroneConfig::parse(&config_path).expect("Config file error");
         let mut uav = UAV 
         {
-            id: id,
+            id,
 
             name: name.to_string(),
 
             state_arc: state.clone(),
 
+            config,
+
             objects_arc: objects,
 
             simulation: Command::new("../UAV_physics_engine/build/uav")
-            .arg("-c").arg("config.xml")
+            .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
             .stdout(Stdio::null())
             .spawn()
             .expect("failed to execute simulation process"),
 
             controller: Command::new("../UAV_controller/build/controller")
-            .arg("-c").arg("config.xml")
+            .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
             .stdout(Stdio::null())
             .spawn()
@@ -110,7 +115,6 @@ impl UAV
 
         uav.steer_socket.connect(&format!("ipc:///tmp/{}/steer",uav.name.to_owned()))
                         .expect("steer connect error");
-        //uav.control_socket.set_rcvtimeo(1000).unwrap();
         uav.control_socket.connect(&format!("ipc:///tmp/{}/control",uav.name.to_owned()))
                         .expect("control connect error");
 
@@ -122,7 +126,6 @@ impl UAV
 
     fn startListeners(_ctx: &mut zmq::Context, uav: &mut UAV, state: Arc<Mutex<DroneState>>)
     {
-        //thread::sleep(time::Duration::from_secs(3));
         let state_address = format!("ipc:///tmp/{}/state",uav.name.to_owned());
 
         let buildSocket = |topic: &str|
