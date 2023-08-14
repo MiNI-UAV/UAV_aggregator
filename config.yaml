@@ -5,7 +5,7 @@ map_offset: 30
 #collisions
 grid: 20, 20, 3
 collisionPlusEps: 0.1
-collisionMinusEps: 0.3
+collisionMinusEps: -0.3
 sphereRadius: 0.1
 projectileRadius: 0.5
 COR: 0.5
