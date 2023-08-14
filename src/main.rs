@@ -41,8 +41,10 @@ fn main() {
 
     let _notifications = Arc::new(notification::Notification::new(ctx.clone(),
         &(*configuration.data["notification_port"].as_u64().get_or_insert(8000) as usize)));
-    let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone())));
-    let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
+    let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone(),
+        configuration.data["object_port"].as_u64().unwrap() as usize)));
+    let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone(),
+        configuration.data["drones_port"].as_u64().unwrap() as usize)));
     let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone(),
      _notifications.clone(), configuration.data["timeout_limit"].as_u64().unwrap() as usize)));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());

@@ -15,7 +15,7 @@ pub struct Drones
 
 impl Drones
 {
-    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
+    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>, port: usize) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
@@ -23,8 +23,8 @@ impl Drones
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
-            publisher_socket.bind("tcp://*:9090").expect("Bind error tcp 9090");
-            println!("State publisher started on TCP: {}", 9090);
+            publisher_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
+            println!("State publisher started on TCP: {}", port);
             while r.load(Ordering::SeqCst) {
                 let drones = drones_arc.lock().unwrap();
                 if !drones.is_empty()
