@@ -2,6 +2,8 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 use nalgebra::Vector3;
 use std::fs::File;
 use std::path::Path;
+use std::str;
+use sha1::{Sha1, Digest};
 
 use crate::{drones::Drones, cargo::Cargo, config::ServerConfig};
 
@@ -141,13 +143,18 @@ impl Clients
                     next_port = next_port + 1;
                 },
                 'c' => {
-                    let mut command = request[2..].splitn(2,';');
+                    let content = &request[2..];
+                    let mut hasher = Sha1::new();
+                    hasher.update(content.as_bytes());
+                    let hash_val = hasher.finalize();
+                    let hash_val = hex::encode(&hash_val[..]);
+                    let hash_val = &hash_val[0..8];
+                    println!("{}", &hash_val);
                     let mut file_name = "configs/".to_string();
-                    file_name.push_str(command.next().unwrap());
+                    file_name.push_str(&hash_val);
                     file_name.push_str(".xml");
-                    let file_content = command.next().unwrap().to_string();
                     let mut file = File::create(file_name).unwrap();
-                    file.write_all(file_content.as_bytes()).expect("Unable to write config");
+                    file.write_all(content.as_bytes()).expect("Unable to write config");
                     drop(file);
                     replyer_socket.send("ok", 0).unwrap();
                 },
