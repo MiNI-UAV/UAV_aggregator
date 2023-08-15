@@ -20,11 +20,12 @@ wind_bias: 1.0, 1.0, 0.0
 
 #connection
 hb_disconnect: 3
+client_limit: 4
 notification_port: 8000
 replyer_port: 9000
 drones_port: 9090
 object_port: 9100
-next_port: 10000
+first_port: 10000
 
 #other
 q_exit: false

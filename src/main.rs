@@ -43,7 +43,7 @@ fn main() {
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone(),
         config::ServerConfig::get_usize("object_port"))));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone(),
-    config::ServerConfig::get_usize("drones_port"))));
+    config::ServerConfig::get_usize("drones_port"), config::ServerConfig::get_usize("client_limit"))));
     let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone(),
      _notifications.clone(), config::ServerConfig::get_usize("timeout_limit"))));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());

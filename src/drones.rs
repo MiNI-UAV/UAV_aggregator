@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use nalgebra::{Vector3, Matrix3xX};
+use nalgebra::{Vector3, Matrix3xX, DVector};
 use crate::uav::{UAV,DroneState};
 use crate::objects::Objects;
 
@@ -11,16 +11,18 @@ pub struct Drones
     objects: Arc<Mutex<Objects>>,
     _state_publisher: Option<thread::JoinHandle<()>>,
     nextID: usize,
+    slots: DVector<usize>
 }
 
 impl Drones
 {
-    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>, port: usize) -> Self {
+    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>, port: usize, client_limit: usize) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
         let drones_arc = drones.clone();
         let publisher_socket = _ctx.socket(zmq::PUB).expect("Pub socket error");
+        let slots: DVector<usize> = DVector::zeros(client_limit);
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
             publisher_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
@@ -46,22 +48,62 @@ impl Drones
             }
         });
         Drones {ctx: _ctx, running: running, drones: drones, objects: objects,
-             _state_publisher: Some(publisher), nextID: 0}
+             _state_publisher: Some(publisher), nextID: 1, slots }
     }
 
-    pub fn startUAV(&mut self, name: &str, config_path: &str) -> (usize,String)
+    fn getSlot(&mut self, id: usize) -> Option<usize>
     {
+        for (i, slot) in self.slots.iter_mut().enumerate()
+        {
+            if *slot == 0
+            {
+                *slot = id;
+                return Some(i)
+            }
+        }
+        None
+    }
+    fn freeSlot(&mut self, id: usize)
+    {
+        
+        for (i,slot) in self.slots.iter_mut().enumerate()
+        {
+            if *slot == id
+            {
+                Self::sendTerminate(self.ctx.clone(),i);
+                *slot = 0;
+            }
+        }
+    }
+
+    fn sendTerminate(ctx: zmq::Context, slot_no: usize)
+    {
+        let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
+        stopSocket.bind(&format!("inproc://stop{}",slot_no)).unwrap();
+        stopSocket.send("TERMINATE", 0).unwrap();
+        drop(stopSocket);
+    }
+
+    pub fn startUAV(&mut self, name: &str, config_path: &str) -> (usize,usize,String)
+    {
+        let slot = self.getSlot(self.nextID);
+        if slot.is_none()
+        {
+            return (0,0,"".to_owned())
+        }
+        let slot = slot.unwrap();
         let state = Arc::new(Mutex::new(DroneState::new()));
         let mut drone = self.drones.lock().unwrap();
         let id = self.nextID;
         self.nextID += 1;
         drone.push(UAV::new(&mut self.ctx,id, name, config_path, state,self.objects.clone()));
         drop(drone);
-        (id,format!("ipc:///tmp/{}/steer", name))
+        (id,slot,format!("ipc:///tmp/{}/steer", name))
     }
 
     pub fn removeUAV(&mut self, id: usize)
     {
+        self.freeSlot(id);
         let mut drone = self.drones.lock().unwrap();
         drone.retain_mut(|d| d.id != id);
         drop(drone);
@@ -71,6 +113,7 @@ impl Drones
     {
         let mut drone = self.drones.lock().unwrap();
         drone.clear();
+        self.slots.apply(|x| *x = 0);
         drop(drone);
     }
 
@@ -146,7 +189,6 @@ impl Drones
         }
         drop(drone_lck);
     }
-
 }
 
 impl Drop for Drones{

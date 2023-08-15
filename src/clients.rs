@@ -12,7 +12,7 @@ pub struct Clients
     running: Arc<AtomicBool>,
     _proxies: Arc<Mutex<Vec<Option<thread::JoinHandle<()>>>>>,
     _control: Arc<Mutex<Vec<Option<thread::JoinHandle<()>>>>>,
-    _replyer: Option<thread::JoinHandle<()>>
+    _replyer: Option<thread::JoinHandle<()>>,
 }
 
 impl Clients
@@ -20,8 +20,7 @@ impl Clients
     pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>, cargo: Arc<Mutex<Cargo>>) -> Self {
         let hb_disconnect: usize = ServerConfig::get_usize("hb_disconnect");
         let replyer_port: usize = ServerConfig::get_usize("replyer_port");
-        let mut next_port: usize = ServerConfig::get_usize("next_port");
-        //let userLimit
+        let first_port: usize = ServerConfig::get_usize("first_port");
         
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
@@ -72,17 +71,24 @@ impl Clients
                     }
                     taken_name.insert(drone_name.to_string());
                     let mut drones_lck = drones.lock().unwrap();
-                    let (drone_no,uav_address) = drones_lck.startUAV(&drone_name,&config_path);
+                    let (drone_no, slot, uav_address) = drones_lck.startUAV(&drone_name,&config_path);
+                    if drone_no == 0
+                    {
+                        let mut reply = String::new();
+                        reply.push_str("-3");
+                        replyer_socket.send(&reply, 0).unwrap(); 
+                        continue;
+                    }
                     drop(drones_lck);
                     println!("Started new drone with name: {}", drone_name);
                     let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
-                    let address = format!("tcp://*:{}", next_port);
+                    let address = format!("tcp://*:{}", first_port+slot);
                     steer_pair_socket.bind(&address).unwrap();
                     let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
                     steer_xpub_socket.connect(&uav_address).unwrap();
                     let mut stop_sub_socket = _ctx.socket(zmq::SUB).unwrap();
                     stop_sub_socket.set_subscribe(b"").unwrap();
-                    stop_sub_socket.connect("inproc://stop").unwrap();
+                    stop_sub_socket.connect(&format!("inproc://stop{}",slot)).unwrap();
                     let mut proxy = p.lock().unwrap();
                     proxy.push(Some(
                         thread::spawn(move ||
@@ -93,7 +99,7 @@ impl Clients
                         }))
                     );
                     drop(proxy);
-                    println!("Ready to connect steer client on TCP: {}", next_port);
+                    println!("Ready to connect steer client on TCP: {}", first_port+slot);
 
                     let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
                     let mut control = c.lock().unwrap();
@@ -106,7 +112,7 @@ impl Clients
                             let mut skipedHeartbeats: usize = 0;
                             let mut local_running = true;
                             control_pair_socket.set_rcvtimeo(1000).unwrap();
-                            let address = format!("tcp://*:{}", next_port+1000);
+                            let address = format!("tcp://*:{}", first_port+slot+1000);
                             control_pair_socket.bind(&address).unwrap();
                             while r2.load(Ordering::SeqCst) && local_running {
                                 let mut request =  zmq::Message::new();
@@ -131,16 +137,15 @@ impl Clients
                         })
                     ));
                     drop(control);
-                    println!("Ready to connect control client on TCP: {}", next_port+1000);
+                    println!("Ready to connect control client on TCP: {}", first_port+slot+1000);
 
                     let mut reply = String::with_capacity(30);
                     reply.push_str(&drone_no.to_string());
                     reply.push(',');
-                    reply.push_str(&next_port.to_string());
+                    reply.push_str(&(first_port+slot).to_string());
                     reply.push(',');
-                    reply.push_str(&(next_port+1000).to_string());
+                    reply.push_str(&(first_port+slot+1000).to_string());
                     replyer_socket.send(&reply, 0).unwrap();
-                    next_port = next_port + 1;
                 },
                 'c' => {
                     let content = &request[2..];
@@ -149,7 +154,7 @@ impl Clients
                     let hash_val = hasher.finalize();
                     let hash_val = hex::encode(&hash_val[..]);
                     let hash_val = &hash_val[0..8];
-                    println!("{}", &hash_val);
+                    println!("Creating/updateing file {}.xml", &hash_val);
                     let mut file_name = "configs/".to_string();
                     file_name.push_str(&hash_val);
                     file_name.push_str(".xml");
