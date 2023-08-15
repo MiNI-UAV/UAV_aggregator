@@ -1,7 +1,72 @@
-use std::fs::File;
+use std::sync::atomic::{self, AtomicBool};
+use std::{fs::File, sync::Mutex};
 use std::io::Read;
 use xmltree::Element;
 use nalgebra::{Vector3, Matrix3xX};
+
+const CONFIG_FILE_NAME: &str = "config.yaml";
+
+static CONFIG: Mutex<Option<serde_yaml::Value>> = Mutex::new(None);
+static READY: AtomicBool = AtomicBool::new(false);
+
+pub struct ServerConfig
+{
+
+}
+
+impl ServerConfig {
+    fn readConfig()
+    {
+        let f = std::fs::File::open(CONFIG_FILE_NAME).unwrap();
+        let mut config_lck = CONFIG.lock().unwrap();
+        *config_lck = Some(serde_yaml::from_reader(f).unwrap());
+        READY.store(true, atomic::Ordering::Relaxed)
+    }
+
+    pub fn get_usize(key :&str) -> usize
+    {
+        if !READY.load(atomic::Ordering::Relaxed)
+        {
+            Self::readConfig();
+        }
+        let config_lck = CONFIG.lock().unwrap();
+        let config_data = config_lck.clone().unwrap();
+        config_data[key].as_u64().unwrap() as usize
+    }
+
+    pub fn get_f32(key :&str) -> f32
+    {
+        if !READY.load(atomic::Ordering::Relaxed)
+        {
+            Self::readConfig();
+        }
+        let config_lck = CONFIG.lock().unwrap();
+        let config_data = config_lck.clone().unwrap();
+        config_data[key].as_f64().unwrap() as f32
+    }
+
+    pub fn get_str(key :&str) -> String
+    {
+        if !READY.load(atomic::Ordering::Relaxed)
+        {
+            Self::readConfig();
+        }
+        let config_lck = CONFIG.lock().unwrap();
+        let config_data = config_lck.clone().unwrap();
+        config_data[key].as_str().unwrap().to_owned()
+    }
+
+    pub fn get_bool(key :&str) -> bool
+    {
+        if !READY.load(atomic::Ordering::Relaxed)
+        {
+            Self::readConfig();
+        }
+        let config_lck = CONFIG.lock().unwrap();
+        let config_data = config_lck.clone().unwrap();
+        config_data[key].as_bool().unwrap()
+    }
+}
 
 #[derive(Clone)]
 pub struct DroneConfig {

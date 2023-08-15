@@ -3,8 +3,6 @@ use nalgebra::{Vector3,geometry::Rotation3};
 use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, notification::Notification};
 
-const TIMEOUT_LIMIT: usize = 10;
-
 struct Link
 {
     timeout: usize,
@@ -22,7 +20,7 @@ pub struct Cargo
 
 impl Cargo
 {
-    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>, _notifications: Arc<Notification>) -> Self
+    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>, _notifications: Arc<Notification>, timeout_limit: usize) -> Self
     {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
@@ -76,7 +74,7 @@ impl Cargo
                         link.timeout += 1;
                     }
                 }
-                links_lck.retain(|_,v| v.timeout < TIMEOUT_LIMIT);
+                links_lck.retain(|_,v| v.timeout < timeout_limit);
 
                 if counter % 500 == 0
                 {

@@ -1,0 +1,31 @@
+#map
+map: de_dust2
+map_offset: 30
+
+#collisions
+grid: 20, 20, 3
+collisionPlusEps: 0.1
+collisionMinusEps: -0.3
+sphereRadius: 0.1
+projectileRadius: 0.5
+COR: 0.5
+mi_s: 0.4
+mi_d: 0.3
+minimalDist: 1.0
+timeout_limit: 10
+
+#wind
+wind_matrix: 0.0, 0.0, 0.5; 0.0, 0.0, 0.2; 0.0, 0.0, 0.0
+wind_bias: 1.0, 1.0, 0.0
+
+#connection
+hb_disconnect: 3
+client_limit: 4
+notification_port: 8000
+replyer_port: 9000
+drones_port: 9090
+object_port: 9100
+first_port: 10000
+
+#other
+q_exit: false

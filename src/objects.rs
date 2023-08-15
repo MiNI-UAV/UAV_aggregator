@@ -48,7 +48,7 @@ pub struct Objects
 
 impl Objects
 {
-    pub fn new(_ctx: zmq::Context) -> Self {
+    pub fn new(_ctx: zmq::Context, port: usize) -> Self {
         let drop_physic = Command::new("../UAV_drop_physic/build/drop")
         .stdout(Stdio::null())
         .spawn()
@@ -63,8 +63,8 @@ impl Objects
             let mut listener_socket = ctx.socket(zmq::XSUB).expect("Sub socket error");
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
-            publisher_socket.bind("tcp://*:9100").expect("Bind error tcp 9100");
-            println!("Object state proxy started on TCP: {}", 9100);
+            publisher_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
+            println!("Object state proxy started on TCP: {}", port);
             let mut stop_sub_socket = ctx.socket(zmq::SUB).unwrap();
             stop_sub_socket.set_subscribe(b"").unwrap();
             stop_sub_socket.connect("inproc://stop").unwrap();
