@@ -167,7 +167,7 @@
          </GPSVel>
       </sensors>
       <AHRS>
-         <type>EKF</type>
+         <type>Complementary</type>
          <alpha>0.9</alpha>
          <Q>1e-14</Q>
          <R>1e-2</R>
