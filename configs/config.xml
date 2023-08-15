@@ -133,4 +133,50 @@
       1, -1, -1,  1,
       1, -1,  1, -1
    </mixer>
+   <navi>
+      <sensors>
+         <accelerometer>
+            <sd>0.001</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.0025</refreshTime>
+         </accelerometer>
+         <gyroscope>
+            <sd>0.01</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.0025</refreshTime>
+         </gyroscope>
+         <magnetometer>
+            <sd>0.01</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.0025</refreshTime>
+         </magnetometer>
+         <barometer>
+            <sd>0.01</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.01</refreshTime>
+         </barometer>
+         <GPS>
+            <sd>0.3</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.3</refreshTime>
+         </GPS>
+         <GPSVel>
+            <sd>0.3</sd>
+            <bias>0.0 0.0 0.0</bias>
+            <refreshTime>0.3</refreshTime>
+         </GPSVel>
+      </sensors>
+      <AHRS>
+         <type>EKF</type>
+         <alpha>0.9</alpha>
+         <Q>1e-14</Q>
+         <R>1e-2</R>
+      </AHRS>
+      <EKF>
+         <predictScaler>1e1</predictScaler>
+         <updateScaler>1e-4</updateScaler>
+         <baroScaler>1e-4</baroScaler>
+         <zScaler>1e3</zScaler>
+      </EKF>
+   </navi>
 </params>
