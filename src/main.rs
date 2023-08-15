@@ -16,7 +16,6 @@ pub mod cargo;
 pub mod notification;
 
 fn main() {
-    let configuration = config::ServerConfig::new();
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -24,7 +23,7 @@ fn main() {
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
     }).expect("Error setting Ctrl-C handler");
-    if configuration.data["q_exit"].as_bool().unwrap()
+    if config::ServerConfig::get_bool("q_exit")
     {
         let device_state = DeviceState::new();
         let r2 = running.clone();
@@ -40,13 +39,13 @@ fn main() {
     stopSocket.bind("inproc://stop").unwrap();
 
     let _notifications = Arc::new(notification::Notification::new(ctx.clone(),
-        &(*configuration.data["notification_port"].as_u64().get_or_insert(8000) as usize)));
+        &(config::ServerConfig::get_usize("notification_port"))));
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone(),
-        configuration.data["object_port"].as_u64().unwrap() as usize)));
+        config::ServerConfig::get_usize("object_port"))));
     let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone(),
-        configuration.data["drones_port"].as_u64().unwrap() as usize)));
+    config::ServerConfig::get_usize("drones_port"))));
     let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone(),
-     _notifications.clone(), configuration.data["timeout_limit"].as_u64().unwrap() as usize)));
+     _notifications.clone(), config::ServerConfig::get_usize("timeout_limit"))));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());
 
     let _wind = wind::Wind::new(_drones.clone(),_objects.clone());

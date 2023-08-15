@@ -13,16 +13,15 @@ impl CollisionDetector
 {
     pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
-        let configuration = ServerConfig::new();
-        let map_offset = configuration.data["map_offset"].as_f64().unwrap() as f32;
+        let map_offset = ServerConfig::get_f32("map_offset");
         let mut map_path = "assets/maps/".to_string();
-        map_path.push_str(configuration.data["map"].as_str().unwrap());
+        map_path.push_str(ServerConfig::get_str("map").as_str());
         map_path.push_str("/map.obj");
 
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
-        let grid = configuration.data["grid"].as_str().unwrap().split(',')
+        let grid = ServerConfig::get_str("grid").as_str().split(',')
         .map(|component| component.trim().parse())
         .collect::<Result<Vec<f32>, _>>()
         .map(|components| {
@@ -33,15 +32,15 @@ impl CollisionDetector
         }).unwrap();
 
         let map = Map::new(&map_path,
-            configuration.data["collisionPlusEps"].as_f64().unwrap() as f32,
-            configuration.data["collisionMinusEps"].as_f64().unwrap()as f32,
+            ServerConfig::get_f32("collisionPlusEps"),
+            ServerConfig::get_f32("collisionMinusEps"),
             grid,
-            configuration.data["sphereRadius"].as_f64().unwrap() as f32,
-            configuration.data["projectileRadius"].as_f64().unwrap() as f32,
-            configuration.data["COR"].as_f64().unwrap() as f32,
-            configuration.data["mi_s"].as_f64().unwrap() as f32,
-            configuration.data["mi_d"].as_f64().unwrap() as f32,
-            configuration.data["minimalDist"].as_f64().unwrap() as f32,
+            ServerConfig::get_f32("sphereRadius"),
+            ServerConfig::get_f32("projectileRadius"),
+            ServerConfig::get_f32("COR"),
+            ServerConfig::get_f32("mi_s"),
+            ServerConfig::get_f32("mi_d"),
+            ServerConfig::get_f32("minimalDist"),
         );
         let (mut box_min, mut box_max) = map.getMinMax();
         box_min.add_scalar_mut(-map_offset);

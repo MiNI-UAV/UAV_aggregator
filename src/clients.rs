@@ -18,10 +18,10 @@ pub struct Clients
 impl Clients
 {
     pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>, cargo: Arc<Mutex<Cargo>>) -> Self {
-        let configuration = ServerConfig::new();
-        let hb_disconnect: usize = configuration.data["hb_disconnect"].as_u64().unwrap() as usize;
-        let replyer_port: usize = *configuration.data["replyer_port"].as_u64().get_or_insert(9000u64) as usize;
-        let mut next_port: usize = *configuration.data["next_port"].as_u64().get_or_insert(10000u64) as usize;
+        let hb_disconnect: usize = ServerConfig::get_usize("hb_disconnect");
+        let replyer_port: usize = ServerConfig::get_usize("replyer_port");
+        let mut next_port: usize = ServerConfig::get_usize("next_port");
+        //let userLimit
         
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();

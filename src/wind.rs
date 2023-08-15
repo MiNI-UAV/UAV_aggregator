@@ -17,10 +17,9 @@ impl Wind
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
-        let configuration = ServerConfig::new();
         let (wind_matrix, wind_bias) =  
-            parseWindFunction(configuration.data["wind_matrix"].as_str().unwrap(),
-            configuration.data["wind_bias"].as_str().unwrap());
+            parseWindFunction(&ServerConfig::get_str("wind_matrix"),
+            &ServerConfig::get_str("wind_bias"));
 
 
         let wind_reqester: JoinHandle<()> = thread::spawn(move ||
