@@ -156,12 +156,12 @@
             <refreshTime>0.01</refreshTime>
          </barometer>
          <GPS>
-            <sd>0.3</sd>
+            <sd>0.5</sd>
             <bias>0.0 0.0 0.0</bias>
             <refreshTime>0.3</refreshTime>
          </GPS>
          <GPSVel>
-            <sd>0.3</sd>
+            <sd>0.5</sd>
             <bias>0.0 0.0 0.0</bias>
             <refreshTime>0.3</refreshTime>
          </GPSVel>
@@ -175,8 +175,8 @@
       <EKF>
          <predictScaler>1e1</predictScaler>
          <updateScaler>1e-4</updateScaler>
-         <baroScaler>1e-4</baroScaler>
-         <zScaler>1e3</zScaler>
+         <baroScaler>1</baroScaler>
+         <zScaler>1e1</zScaler>
       </EKF>
    </navi>
 </params>
