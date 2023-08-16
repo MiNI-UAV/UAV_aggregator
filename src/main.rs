@@ -14,8 +14,10 @@ pub mod config;
 pub mod map;
 pub mod cargo;
 pub mod notification;
+pub mod checksum;
 
 fn main() {
+    checksum::calcChecksum();
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();

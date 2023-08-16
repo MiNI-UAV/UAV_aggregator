@@ -4,7 +4,7 @@ use std::io::Read;
 use xmltree::Element;
 use nalgebra::{Vector3, Matrix3xX};
 
-const CONFIG_FILE_NAME: &str = "config.yaml";
+const CONFIG_FILE_PATH: &str = "configs/config.yaml";
 
 static CONFIG: Mutex<Option<serde_yaml::Value>> = Mutex::new(None);
 static READY: AtomicBool = AtomicBool::new(false);
@@ -17,7 +17,7 @@ pub struct ServerConfig
 impl ServerConfig {
     fn readConfig()
     {
-        let f = std::fs::File::open(CONFIG_FILE_NAME).unwrap();
+        let f = std::fs::File::open(CONFIG_FILE_PATH).unwrap();
         let mut config_lck = CONFIG.lock().unwrap();
         *config_lck = Some(serde_yaml::from_reader(f).unwrap());
         READY.store(true, atomic::Ordering::Relaxed)
