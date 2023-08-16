@@ -1,0 +1,29 @@
+name: Release assets
+
+on:
+  push:
+    branches:    
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - name: Put tag
+        run: |
+             checksum=`cat configs/assets_checksum`
+             echo "Checksum: ${checksum}"
+             if ! [ $(git tag -l "$checksum") ]; then
+               echo "Release of this checksum not exist!"
+               tar -czf assets.tar.gz assets
+               git tag "${checksum}"
+               git push origin --tags
+               echo "TAG_NAME=${checksum}" >> "$GITHUB_ENV"
+             fi
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.TAG_NAME }}
+          artifacts: assets.tar.gz
