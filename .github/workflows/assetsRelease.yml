@@ -23,7 +23,9 @@ jobs:
                git push origin --tags
                echo "TAG_NAME=${checksum}" >> "$GITHUB_ENV"
              fi
-      - uses: ncipollo/release-action@v1
+      - name: Release assets
+        if: env.TAG_NAME
+        uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.TAG_NAME }}
           artifacts: assets.tar.gz
