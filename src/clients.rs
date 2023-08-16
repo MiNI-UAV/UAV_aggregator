@@ -7,6 +7,8 @@ use sha1::{Sha1, Digest};
 
 use crate::{drones::Drones, cargo::Cargo, config::ServerConfig};
 
+const DRONE_CONFIGS_PATH: &str = "./configs/drones_configs/";
+
 pub struct Clients
 {
     running: Arc<AtomicBool>,
@@ -47,7 +49,7 @@ impl Clients
                     let mut command = request[2..].splitn(2,';');
                     let mut drone_name = command.next().unwrap().to_owned();
                     let config_name = command.next().get_or_insert("config").to_owned();
-                    let mut config_path = "configs/".to_string();
+                    let mut config_path = DRONE_CONFIGS_PATH.to_string();
                     config_path.push_str(&config_name);
                     config_path.push_str(".xml");
                     if drone_name.is_empty(){
@@ -155,7 +157,7 @@ impl Clients
                     let hash_val = hex::encode(&hash_val[..]);
                     let hash_val = &hash_val[0..8];
                     println!("Creating/updateing file {}.xml", &hash_val);
-                    let mut file_name = "configs/".to_string();
+                    let mut file_name = DRONE_CONFIGS_PATH.to_string();
                     file_name.push_str(&hash_val);
                     file_name.push_str(".xml");
                     let mut file = File::create(file_name).unwrap();
