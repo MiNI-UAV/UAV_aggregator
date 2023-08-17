@@ -29,3 +29,4 @@ first_port: 10000
 
 #other
 q_exit: false
+notifyTypeScaler: 10

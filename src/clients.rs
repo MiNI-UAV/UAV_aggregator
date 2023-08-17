@@ -1,6 +1,6 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet, io::Write};
 use nalgebra::Vector3;
-use std::fs::File;
+use std::fs::{File,read_dir};
 use std::path::Path;
 use std::str;
 use sha1::{Sha1, Digest};
@@ -179,9 +179,13 @@ impl Clients
 
     fn getServerInfo() -> String
     {
+        let configs: Vec<String> = read_dir(DRONE_CONFIGS_PATH).unwrap()
+            .map(|p| p.unwrap().file_name().to_str().unwrap().split(".").next().unwrap().to_string()).collect();
         let info = json!({
             "checksum": getChecksum(),
             "map": ServerConfig::get_str("map"),
+            "configs": configs 
+
         });
         serde_json::to_string(&info).unwrap()
     }

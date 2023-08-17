@@ -1,7 +1,8 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
 use nalgebra::{Vector3, Matrix3xX, DVector};
-use crate::uav::{UAV,DroneState};
+use crate::{uav::{UAV,DroneState}, notification::Notification};
 use crate::objects::Objects;
+use crate::config::ServerConfig;
 
 pub struct Drones
 {
@@ -16,7 +17,12 @@ pub struct Drones
 
 impl Drones
 {
-    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>, port: usize, client_limit: usize) -> Self {
+    pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
+        let port: usize = ServerConfig::get_usize("drones_port"); 
+        let client_limit: usize = ServerConfig::get_usize("client_limit");
+        let notify_type_scaler: usize = ServerConfig::get_usize("notifyTypeScaler");
+        let mut counter: usize = 0;
+
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
@@ -31,7 +37,18 @@ impl Drones
                 let drones = drones_arc.lock().unwrap();
                 if !drones.is_empty()
                 {
+                    let mut timeToNotify = false;
+                    let mut notifyTypesMsg = String::new();
+                    counter += 1;
+                    if counter == notify_type_scaler
+                    {
+                        timeToNotify = true;
+                        counter = 0;
+                        notifyTypesMsg.reserve(drones.len()*50);
+                        notifyTypesMsg.push_str("t:");
+                    }
                     let mut result = String::with_capacity(drones.len()*320);
+
                     for elem in drones.iter()  {
                         result.push_str(&elem.id.to_string());
                         result.push(',');
@@ -39,8 +56,19 @@ impl Drones
                         result.push_str(&state.to_string());
                         drop(state);
                         result.push(';');
+                        if timeToNotify
+                        {
+                            notifyTypesMsg.push_str(&elem.id.to_string());
+                            notifyTypesMsg.push(',');
+                            notifyTypesMsg.push_str(&elem.config.drone_type);
+                            notifyTypesMsg.push(';');
+                        }
                     }
                     publisher_socket.send(&result, 0).unwrap();
+                    if timeToNotify
+                    {
+                        Notification::sendMsg(&notifyTypesMsg);
+                    }
                     //println!("{}",result);
                 }
                 drop(drones);

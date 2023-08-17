@@ -40,14 +40,12 @@ fn main() {
     let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
     stopSocket.bind("inproc://stop").unwrap();
 
-    let _notifications = Arc::new(notification::Notification::new(ctx.clone(),
-        &(config::ServerConfig::get_usize("notification_port"))));
+    notification::Notification::init(ctx.clone(),
+        &(config::ServerConfig::get_usize("notification_port")));
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone(),
         config::ServerConfig::get_usize("object_port"))));
-    let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone(),
-    config::ServerConfig::get_usize("drones_port"), config::ServerConfig::get_usize("client_limit"))));
-    let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone(),
-     _notifications.clone(), config::ServerConfig::get_usize("timeout_limit"))));
+    let _drones = Arc::new(Mutex::new(drones::Drones::new(ctx.clone(),_objects.clone())));
+    let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());
 
     let _wind = wind::Wind::new(_drones.clone(),_objects.clone());

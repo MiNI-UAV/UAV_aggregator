@@ -1,7 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time, collections::HashMap};
 use nalgebra::{Vector3,geometry::Rotation3};
 use std::time::Instant;
-use crate::{drones::Drones, objects::Objects, notification::Notification};
+use crate::{drones::Drones, objects::Objects, config::ServerConfig, notification::Notification};
 
 struct Link
 {
@@ -20,8 +20,9 @@ pub struct Cargo
 
 impl Cargo
 {
-    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>, _notifications: Arc<Notification>, timeout_limit: usize) -> Self
+    pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
+        let timeout_limit = ServerConfig::get_usize("timeout_limit");
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let links = Arc::new(Mutex::new(HashMap::<(usize,usize),Link>::new()));
@@ -146,6 +147,7 @@ fn notifyAboutLinks(links: &HashMap<(usize, usize), Link>){
         msg.push_str(&link.hook_offset.z.to_string());
         msg.push(';');
     }
+    Notification::sendMsg(&msg);
 }
 
 

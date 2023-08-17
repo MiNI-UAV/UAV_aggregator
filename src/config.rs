@@ -71,6 +71,7 @@ impl ServerConfig {
 #[derive(Clone)]
 pub struct DroneConfig {
     pub name: String,
+    pub drone_type: String,
     pub mass: f32,
     pub inertia: Inertia,
     pub rotors: Rotors,
@@ -152,6 +153,7 @@ impl DroneConfig {
         // Create a DroneConfig instance and populate its fields
         let config = DroneConfig {
             name: root.get_child("name").unwrap().get_text().unwrap().to_string(),
+            drone_type: root.get_child("type").unwrap().get_text().unwrap().to_string(),
             mass: root.get_child("ineria").unwrap().get_child("mass").unwrap().get_text().unwrap().parse()?,
             inertia: parse_inertia(root.get_child("ineria").unwrap()),
             rotors: parse_rotors(root.get_child("rotors").unwrap()),
