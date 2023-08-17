@@ -16,7 +16,7 @@ impl CollisionDetector
         let map_offset = ServerConfig::get_f32("map_offset");
         let mut map_path = "assets/maps/".to_string();
         map_path.push_str(ServerConfig::get_str("map").as_str());
-        map_path.push_str("/map.obj");
+        map_path.push_str("/model/model.obj");
 
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
