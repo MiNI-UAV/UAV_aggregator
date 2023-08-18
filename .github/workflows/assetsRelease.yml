@@ -30,3 +30,14 @@ jobs:
         with:
           tag: ${{ env.TAG_NAME }}
           artifacts: assets.tar.gz
+      - name: Update UAV Server
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.SERVER_DISPATCH_TOKEN }}
+          script: |
+            const result = await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: 'UAV_server',
+              event_type: 'dependency_update'
+            })
+            console.log(result);
