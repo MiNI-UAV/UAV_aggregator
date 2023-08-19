@@ -164,7 +164,10 @@ impl Clients
                         let mut file = File::create(file_name).unwrap();
                         file.write_all(content.as_bytes()).expect("Unable to write config");
                         drop(file);
-                        replyer_socket.send("ok", 0).unwrap();
+                        let mut reply = String::with_capacity(12);
+                        reply.push_str("ok;");
+                        reply.push_str(&hash_val);
+                        replyer_socket.send(&reply, 0).unwrap();
                     },
                 
                     'i' => {
