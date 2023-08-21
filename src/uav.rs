@@ -1,19 +1,19 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
-use nalgebra::{Vector3,Vector6};
+use nalgebra::{Vector3,Vector6, SVector, Vector4};
 use crate::objects::Objects;
 use crate::config::DroneConfig;
 
 pub struct DroneState
 {
     time: f32,
-    pos: Vector6<f32>,
+    pos: SVector<f32,7>,
     vel: Vector6<f32>,
     om: Vec<f32>,
 }
 
 impl DroneState {
     pub fn new() -> Self {
-        DroneState {time: -1.0, pos: Vector6::repeat(-1.0f32), vel: Vector6::repeat(-1.0f32), om: Vec::new()}
+        DroneState {time: -1.0, pos: SVector::repeat(-1.0f32), vel: Vector6::repeat(-1.0f32), om: Vec::new()}
     }
 
     pub fn getPos3(&self) -> Vector3<f32>
@@ -23,7 +23,8 @@ impl DroneState {
 
     pub fn getOri(&self) -> Vector3<f32>
     {
-        self.pos.fixed_view::<3, 1>(3, 0).into()
+        let q: Vector4<f32> = self.pos.fixed_view::<4, 1>(3, 0).into();
+        Self::quaterionsToRPY(q)
     }
 
     pub fn getVel(&self) -> Vector3<f32>
@@ -35,6 +36,15 @@ impl DroneState {
     {
         self.vel.fixed_view::<3, 1>(3, 0).into()
     }
+
+    fn quaterionsToRPY(e: Vector4<f32>) -> Vector3<f32>
+    {
+        let mut RPY = Vector3::<f32>::zeros();
+        RPY[0] = (2.0*(e[0]*e[1]+e[2]*e[3])).atan2(e[0]*e[0]-e[1]*e[1]-e[2]*e[2]+e[3]*e[3]);
+        RPY[1] = (2.0*(e[0]*e[2]-e[1]*e[3])).asin();
+        RPY[2] = (2.0*(e[0]*e[3]+e[1]*e[2])).atan2(e[0]*e[0]+e[1]*e[1]-e[2]*e[2]-e[3]*e[3]);
+        RPY
+    }
 }
 
 impl ToString for DroneState {
@@ -42,7 +52,7 @@ impl ToString for DroneState {
         let mut result = String::with_capacity(200);
         result.push_str(&self.time.to_string());
         result.push(',');
-        for i in 0..6 {
+        for i in 0..7 {
             result.push_str(&self.pos[i].to_string());
             result.push(','); 
         }
@@ -150,6 +160,20 @@ impl UAV
             }
             array
         };
+
+        let parseToArray7 = |msg: &str, start: usize|
+        {
+            let mut array =  SVector::<f32,7>::repeat(-1.0f32);
+            let trimmed = msg.chars().skip(start).collect::<String>();
+            let items = trimmed.split(',').take(7);
+
+            for (i, item) in items.enumerate() {
+                if let Ok(parsed_value) = item.trim().parse::<f32>() {
+                    array[i] = parsed_value;
+                }
+            }
+            array
+        };
         
         let t_socket = buildSocket("t");
         let pos_socket = buildSocket("pos");
@@ -168,7 +192,7 @@ impl UAV
                 pos_socket.recv(&mut msg, 0).unwrap();
                 let s = msg.as_str().unwrap();
                 //println!("{}", s);
-                let pos = parseToArray(s,4);
+                let pos = parseToArray7(s,4);
 
                 vel_socket.recv(&mut msg, 0).unwrap();
                 let s = msg.as_str().unwrap();
