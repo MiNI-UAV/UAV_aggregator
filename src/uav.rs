@@ -104,7 +104,7 @@ impl UAV
             .spawn()
             .expect("failed to execute controller process"),
 
-            steer_socket:  _ctx.socket(zmq::PUB)
+            steer_socket:  _ctx.socket(zmq::REQ)
                                 .expect("creating socket error"),
 
             control_socket:  _ctx.socket(zmq::REQ)

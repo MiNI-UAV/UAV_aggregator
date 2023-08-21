@@ -84,11 +84,11 @@ impl Clients
                         }
                         drop(drones_lck);
                         println!("Started new drone with name: {}", drone_name);
-                        let mut steer_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
+                        let mut steer_router_socket = _ctx.socket(zmq::ROUTER).unwrap();
                         let address = format!("tcp://*:{}", first_port+slot);
-                        steer_pair_socket.bind(&address).unwrap();
-                        let mut steer_xpub_socket = _ctx.socket(zmq::XPUB).unwrap();
-                        steer_xpub_socket.connect(&uav_address).unwrap();
+                        steer_router_socket.bind(&address).unwrap();
+                        let mut steer_dealer_socket = _ctx.socket(zmq::DEALER).unwrap();
+                        steer_dealer_socket.connect(&uav_address).unwrap();
                         let mut stop_sub_socket = _ctx.socket(zmq::SUB).unwrap();
                         stop_sub_socket.set_subscribe(b"").unwrap();
                         stop_sub_socket.connect(&format!("inproc://stop{}",slot)).unwrap();
@@ -96,7 +96,7 @@ impl Clients
                         proxy.push(Some(
                             thread::spawn(move ||
                             {
-                                zmq::proxy_steerable(&mut steer_pair_socket, &mut steer_xpub_socket,&mut stop_sub_socket).expect("Proxy err");
+                                zmq::proxy_steerable(&mut steer_router_socket, &mut steer_dealer_socket,&mut stop_sub_socket).expect("Proxy err");
                                 println!("Closing client proxy");
 
                             }))
