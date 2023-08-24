@@ -115,6 +115,63 @@
 			]
 		}
 	],
+	"animations":[
+		{
+			"channels":[
+				{
+					"sampler":0,
+					"target":{
+						"node":0,
+						"path":"rotation"
+					}
+				},
+				{
+					"sampler":1,
+					"target":{
+						"node":1,
+						"path":"rotation"
+					}
+				},
+				{
+					"sampler":2,
+					"target":{
+						"node":2,
+						"path":"rotation"
+					}
+				},
+				{
+					"sampler":3,
+					"target":{
+						"node":3,
+						"path":"rotation"
+					}
+				}
+			],
+			"name":"Animation",
+			"samplers":[
+				{
+					"input":17,
+					"interpolation":"LINEAR",
+					"output":18
+				},
+				{
+					"input":17,
+					"interpolation":"LINEAR",
+					"output":19
+				},
+				{
+					"input":17,
+					"interpolation":"LINEAR",
+					"output":20
+				},
+				{
+					"input":17,
+					"interpolation":"LINEAR",
+					"output":21
+				}
+			]
+		}
+	],
 	"materials":[
 		{
 			"doubleSided":true,
@@ -365,6 +422,42 @@
 			"componentType":5123,
 			"count":7524,
 			"type":"SCALAR"
+		},
+		{
+			"bufferView":17,
+			"componentType":5126,
+			"count":250,
+			"max":[
+				10.416666666666666
+			],
+			"min":[
+				0.041666666666666664
+			],
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":18,
+			"componentType":5126,
+			"count":250,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":19,
+			"componentType":5126,
+			"count":250,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":20,
+			"componentType":5126,
+			"count":250,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":21,
+			"componentType":5126,
+			"count":250,
+			"type":"VEC4"
 		}
 	],
 	"bufferViews":[
@@ -469,6 +562,31 @@
 			"byteLength":15048,
 			"byteOffset":161608,
 			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":1000,
+			"byteOffset":176656
+		},
+		{
+			"buffer":0,
+			"byteLength":4000,
+			"byteOffset":177656
+		},
+		{
+			"buffer":0,
+			"byteLength":4000,
+			"byteOffset":181656
+		},
+		{
+			"buffer":0,
+			"byteLength":4000,
+			"byteOffset":185656
+		},
+		{
+			"buffer":0,
+			"byteLength":4000,
+			"byteOffset":189656
 		}
 	],
 	"samplers":[
@@ -479,7 +597,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":176656,
+			"byteLength":193656,
 			"uri":"model.bin"
 		}
 	]
