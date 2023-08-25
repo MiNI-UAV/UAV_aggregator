@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use nalgebra::{Vector3, Matrix3xX, DVector};
+use nalgebra::{Vector3,Vector4, Matrix3xX, DVector};
 use crate::{uav::{UAV,DroneState}, notification::Notification};
 use crate::objects::Objects;
 use crate::config::ServerConfig;
@@ -168,7 +168,7 @@ impl Drones
         pos
     }
 
-    pub fn getPosOriVels(&self) -> Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>
+    pub fn getPosOriVels(&self) -> Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>
     {
         let mut pos = Vec::new();
         let drone = self.drones.lock().unwrap();
@@ -178,6 +178,22 @@ impl Drones
             for elem in drone.iter()  {
                 let state_lck = elem.state_arc.lock().unwrap();
                 pos.push((elem.id,state_lck.getPos3(),state_lck.getOri(),state_lck.getVel(),state_lck.getAngVel()));
+            }
+        }
+        drop(drone);
+        pos
+    }
+
+    pub fn getPosOriRPYVels(&self) -> Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>
+    {
+        let mut pos = Vec::new();
+        let drone = self.drones.lock().unwrap();
+        if !drone.is_empty()
+        {
+
+            for elem in drone.iter()  {
+                let state_lck = elem.state_arc.lock().unwrap();
+                pos.push((elem.id,state_lck.getPos3(),state_lck.getOriRPY(),state_lck.getVel(),state_lck.getAngVel()));
             }
         }
         drop(drone);
