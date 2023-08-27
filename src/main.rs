@@ -15,9 +15,12 @@ pub mod map;
 pub mod cargo;
 pub mod notification;
 pub mod checksum;
+pub mod logger;
 
 fn main() {
     checksum::calcChecksum();
+    logger::Logger::startSession();
+
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -67,4 +70,6 @@ fn main() {
     drop(_drones);
     drop(_objects);
     drop(ctx);
+
+    logger::Logger::endSession();
 }
