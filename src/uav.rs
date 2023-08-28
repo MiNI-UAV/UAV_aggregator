@@ -112,7 +112,7 @@ impl UAV
             controller: Command::new("../UAV_controller/build/controller")
             .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
-            //.stdout(Stdio::null())
+            .stdout(Stdio::null())
             .spawn()
             .expect("failed to execute controller process"),
 
