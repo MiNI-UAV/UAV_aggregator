@@ -2,6 +2,8 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 use nalgebra::{Vector3,geometry::Rotation3, Matrix3xX};
 use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig};
+use crate::printLog;
+
 
 pub struct CollisionDetector
 {
@@ -76,7 +78,7 @@ impl CollisionDetector
                 
                 #[allow(unused_variables)]
                 let elapsed = start.elapsed();
-                //println!("Collision calc time: {} ms", elapsed.as_millis());
+                //printLog!("Collision calc time: {} ms", elapsed.as_millis());
                 thread::sleep(time::Duration::from_millis(1));
 
             }
@@ -95,7 +97,7 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&dist).abs() < minimal_dist
                 {
-                    println!("Collision detected between drone {} and {}", obj1.0,obj2.0);
+                    printLog!("Collision detected between drone {} and {}", obj1.0,obj2.0);
                 }
             }
         }
@@ -109,7 +111,7 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < minimal_dist
                 {
-                    //println!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
+                    //printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }
         }
@@ -124,7 +126,7 @@ impl CollisionDetector
         {
             if box_min.inf(pos) != box_min || box_max.sup(pos) != box_max
             {
-                println!("Object {} is outside the boundary box", id);
+                printLog!("Object {} is outside the boundary box", id);
                 objToKill.push(id);
             }
         }
@@ -256,9 +258,9 @@ impl CollisionDetector
 
 impl Drop for CollisionDetector{
     fn drop(&mut self) {
-        println!("Dropping collision detector instance");
+        printLog!("Dropping collision detector instance");
         self.running.store(false, Ordering::SeqCst);
         self.collision_checker.take().unwrap().join().expect("Join error");
-        println!("Collision detector instance dropped");
+        printLog!("Collision detector instance dropped");
     }
 }

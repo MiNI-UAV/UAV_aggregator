@@ -1,8 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use nalgebra::{Vector3, Matrix3};
-
 use crate::{drones::Drones, objects::Objects, config::ServerConfig};
-
+use crate::printLog;
 
 pub struct Wind
 {
@@ -99,9 +98,9 @@ fn parseWindFunction(wind_matrix: &str, wind_bias: &str) -> (Matrix3<f32>, Vecto
 
 impl Drop for Wind{
     fn drop(&mut self) {
-        println!("Dropping wind instance");
+        printLog!("Dropping wind instance");
         self.running.store(false, Ordering::SeqCst);
         self.wind_reqester.take().unwrap().join().expect("Join error");
-        println!("Wind instance dropped");
+        printLog!("Wind instance dropped");
     }
 }

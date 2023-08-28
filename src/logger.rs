@@ -4,9 +4,10 @@ use std::sync::Mutex;
 use std::time::{SystemTime,UNIX_EPOCH};
 
 static SESSION: Mutex<String> = Mutex::new(String::new());
-static LOG_FILE: Mutex<Option<File>> = Mutex::new(Option::None);
+pub static LOG_FILE: Mutex<Option<File>> = Mutex::new(Option::None);
 const LOG_FOLDER: &str = "./logs/";
 
+#[macro_export]
 macro_rules! printLog
 {
     () => {
@@ -14,11 +15,11 @@ macro_rules! printLog
     };
     ($($arg:tt)*) => {{
         println!($($arg)*);
-        let mut log_file = LOG_FILE.lock().unwrap();
+        let mut log_file = crate::logger::LOG_FILE.lock().unwrap();
         if let Some(file) = log_file.as_mut()
         {
-            file.write(format!($($arg)*).as_bytes()).expect("Unable to write log");
-            file.write(b"\n").unwrap();
+            std::io::Write::write(file,format!($($arg)*).as_bytes()).expect("Unable to write log");
+            std::io::Write::write(file,b"\n").unwrap();
         }
     }};
 }
@@ -28,6 +29,7 @@ pub struct Logger
 
 impl Logger
 {
+
     fn init()
     {
         let session = SESSION.lock().unwrap();

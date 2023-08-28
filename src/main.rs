@@ -57,11 +57,11 @@ fn main() {
     while running.load(Ordering::SeqCst) {
         thread::sleep(time::Duration::from_millis(300));
     }
-    println!("Bye!");
+    printLog!("Bye!");
     stopSocket.send("TERMINATE", 0).unwrap();
     let mut drones_lck = _drones.lock().unwrap();
     drones_lck.removeAllUAV();
-    println!("All drone killed!");
+    printLog!("All drone killed!");
     drop(drones_lck);
     drop(_colision_detector);
     drop(_wind);

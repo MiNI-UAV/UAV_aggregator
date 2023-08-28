@@ -1,6 +1,8 @@
 use std::sync::atomic::{AtomicBool, self};
 use std::sync::Mutex;
 use zmq::Socket;
+use crate::printLog;
+
 
 
 static READY: AtomicBool = AtomicBool::new(false);
@@ -16,7 +18,7 @@ impl Notification
     {
         let pub_socket = _ctx.socket(zmq::PUB).expect("PUB socket error");
         pub_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
-        println!("Notification publisher started on TCP: {}", port);
+        printLog!("Notification publisher started on TCP: {}", port);
         let mut socket_lck = NOTIFY_SOCKET.lock().unwrap();
         *socket_lck = Some(pub_socket);
         READY.store(true, atomic::Ordering::Relaxed)

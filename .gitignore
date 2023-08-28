@@ -3,3 +3,5 @@
 .idea
 .gradle
 logs/*
+configs/drones_configs
+!configs/drones_configs/config.xml
