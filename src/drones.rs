@@ -3,6 +3,8 @@ use nalgebra::{Vector3, Matrix3xX, DVector};
 use crate::{uav::{UAV,DroneState}, notification::Notification};
 use crate::objects::Objects;
 use crate::config::ServerConfig;
+use crate::printLog;
+
 
 pub struct Drones
 {
@@ -32,7 +34,7 @@ impl Drones
         let publisher: JoinHandle<()> = thread::spawn(move ||
         {
             publisher_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
-            println!("State publisher started on TCP: {}", port);
+            printLog!("State publisher started on TCP: {}", port);
             while r.load(Ordering::SeqCst) {
                 let drones = drones_arc.lock().unwrap();
                 if !drones.is_empty()
@@ -69,7 +71,7 @@ impl Drones
                     {
                         Notification::sendMsg(&notifyTypesMsg);
                     }
-                    //println!("{}",result);
+                    //printLog!("{}",result);
                 }
                 drop(drones);
                 thread::sleep(time::Duration::from_millis(10));
@@ -149,7 +151,7 @@ impl Drones
     {
         for (i, item) in self.drones.lock().unwrap().iter().enumerate() {
             let state = item.state_arc.lock().unwrap();
-            println!("{}:{}",i,state.to_string());
+            printLog!("{}:{}",i,state.to_string());
         }
     }
 
@@ -221,10 +223,10 @@ impl Drones
 
 impl Drop for Drones{
     fn drop(&mut self) {
-        println!("Dropping drones instance");
+        printLog!("Dropping drones instance");
         self.running.store(false, Ordering::SeqCst);
         self._state_publisher.take().unwrap().join().expect("Join error");
         self.removeAllUAV();
-        println!("Drones instance dropped");
+        printLog!("Drones instance dropped");
     }
 }

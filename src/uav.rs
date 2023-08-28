@@ -2,6 +2,8 @@ use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sy
 use nalgebra::{Vector3,Vector6, SVector, Vector4};
 use crate::objects::Objects;
 use crate::config::DroneConfig;
+use crate::printLog;
+
 
 pub struct DroneState
 {
@@ -129,7 +131,7 @@ impl UAV
                         .expect("control connect error");
 
         UAV::startListeners(_ctx, &mut uav, state);
-        println!("Created new drone: {}!", uav.name);      
+        printLog!("Created new drone: {}!", uav.name);      
 
         uav
     }
@@ -186,17 +188,17 @@ impl UAV
 
                 t_socket.recv(&mut msg, 0).unwrap();
                 let s = msg.as_str().unwrap();
-                //println!("{}", s);
+                //printLog!("{}", s);
                 let t = s[2..].parse::<f32>().expect("parse t error");
 
                 pos_socket.recv(&mut msg, 0).unwrap();
                 let s = msg.as_str().unwrap();
-                //println!("{}", s);
+                //printLog!("{}", s);
                 let pos = parseToArray7(s,4);
 
                 vel_socket.recv(&mut msg, 0).unwrap();
                 let s = msg.as_str().unwrap();
-                //println!("{}", s);
+                //printLog!("{}", s);
                 let vel = parseToArray(s,3);
 
                 om_socket.recv(&mut msg, 0).unwrap();
@@ -231,12 +233,12 @@ impl UAV
         if self.control_socket.recv(&mut msg, 0).is_ok()
         {
             let rep = msg.as_str().unwrap();
-            //println!("{}", msg_str);
+            //printLog!("{}", msg_str);
             assert!(rep.contains("ok"));
             rep.to_string()
         }
         else {
-            println!("Error while sending: {}", msg_str);
+            printLog!("Error while sending: {}", msg_str);
             String::new()
         }      
     }
@@ -335,7 +337,7 @@ impl UAV
         command.push_str(&normalVector[1].to_string());
         command.push(',');
         command.push_str(&normalVector[2].to_string());
-        //println!("{}", command);
+        //printLog!("{}", command);
         self._sendControlMsg(&command);
     }
 
@@ -343,10 +345,10 @@ impl UAV
 
 impl Drop for UAV {
     fn drop(&mut self) {
-        println!("Dropping drone: {}", self.name);
+        printLog!("Dropping drone: {}", self.name);
         self._sendSteeringMsg("c:exit");
         self.simulation.wait().expect("sim wait");
         self.controller.wait().expect("controller wait");
-        println!("Drone eliminated: {}!", self.name); 
+        printLog!("Drone eliminated: {}!", self.name); 
     } 
 }

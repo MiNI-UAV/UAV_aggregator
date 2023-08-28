@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::collections::{HashMap,HashSet};
 use std::hash::{Hash, Hasher};
+use crate::printLog;
+
 
 pub struct Map
 {
@@ -31,8 +33,8 @@ impl Map
         let (min,max) = walls.boundingBox();
         let step = (max-min).component_div(&grid);
 
-        println!("Min: {} Max: {}", min,max);
-        println!("Chunk size: {}", step);
+        printLog!("Min: {} Max: {}", min,max);
+        printLog!("Chunk size: {}", step);
 
         let facesInChunk =  HashMap::<Vector3<usize>,HashSet<Face>>::new();
 
@@ -117,7 +119,7 @@ impl Map
 
         // for elem in &self.facesInChunk
         // {
-        //     println!("Chunk: {} - faces: {}", elem.0, elem.1.len());
+        //     printLog!("Chunk: {} - faces: {}", elem.0, elem.1.len());
         // }
     }
 
@@ -228,7 +230,7 @@ impl Face {
         }
         n.normalize_mut();
         let invProjectMatrix = Matrix3::from_columns(&[s,t,n]);
-        //println!("Inv: {}", invProjectMatrix);
+        //printLog!("Inv: {}", invProjectMatrix);
 
         Face{id, _vertices: vertices, _normals: normals, normal: n,
                 projectMatrix: invProjectMatrix.try_inverse().expect("Can not inverse project matrix"),
@@ -243,10 +245,10 @@ impl Face {
         {
             // if res[2].abs() < 0.1
             // {
-            //     println!("Point: {}", point);
-            //     println!("Face vertex: {:?}", self._vertices);
-            //     println!("Face normal: {:?}", self.normal);
-            //     println!("Res: {}", res);            
+            //     printLog!("Point: {}", point);
+            //     printLog!("Face vertex: {:?}", self._vertices);
+            //     printLog!("Face normal: {:?}", self.normal);
+            //     printLog!("Res: {}", res);            
             // }
             return (true,res[2])
         } 

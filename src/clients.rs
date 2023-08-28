@@ -7,6 +7,8 @@ use sha1::{Sha1, Digest};
 use serde_json::json;
 
 use crate::{drones::Drones, cargo::Cargo, config::ServerConfig, checksum::getChecksum};
+use crate::printLog;
+
 
 const DRONE_CONFIGS_PATH: &str = "./configs/drones_configs/";
 
@@ -37,7 +39,7 @@ impl Clients
         {
             replyer_socket.set_rcvtimeo(1000).unwrap();
             replyer_socket.bind(format!("tcp://*:{}",replyer_port).as_str()).expect(format!("Bind error tcp {}",replyer_port).as_str());
-            println!("Replyer started on TCP: {}", replyer_port);
+            printLog!("Replyer started on TCP: {}", replyer_port);
             while r.load(Ordering::SeqCst) {
                 let mut request =  zmq::Message::new();
                 if let Err(_) = replyer_socket.recv(&mut request, 0)
@@ -83,7 +85,7 @@ impl Clients
                             continue;
                         }
                         drop(drones_lck);
-                        println!("Started new drone with name: {}", drone_name);
+                        printLog!("Started new drone with name: {}", drone_name);
                         let mut steer_router_socket = _ctx.socket(zmq::ROUTER).unwrap();
                         let address = format!("tcp://*:{}", first_port+slot);
                         steer_router_socket.bind(&address).unwrap();
@@ -97,12 +99,12 @@ impl Clients
                             thread::spawn(move ||
                             {
                                 zmq::proxy_steerable(&mut steer_router_socket, &mut steer_dealer_socket,&mut stop_sub_socket).expect("Proxy err");
-                                println!("Closing client proxy");
+                                printLog!("Closing client proxy");
 
                             }))
                         );
                         drop(proxy);
-                        println!("Ready to connect steer client on TCP: {}", first_port+slot);
+                        printLog!("Ready to connect steer client on TCP: {}", first_port+slot);
 
                         let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
                         let mut control = c.lock().unwrap();
@@ -140,7 +142,7 @@ impl Clients
                             })
                         ));
                         drop(control);
-                        println!("Ready to connect control client on TCP: {}", first_port+slot+1000);
+                        printLog!("Ready to connect control client on TCP: {}", first_port+slot+1000);
 
                         let mut reply = String::with_capacity(30);
                         reply.push_str(&drone_no.to_string());
@@ -157,7 +159,7 @@ impl Clients
                         let hash_val = hasher.finalize();
                         let hash_val = hex::encode(&hash_val[..]);
                         let hash_val = &hash_val[0..8];
-                        println!("Creating/updateing file {}.xml", &hash_val);
+                        printLog!("Creating/updateing file {}.xml", &hash_val);
                         let mut file_name = DRONE_CONFIGS_PATH.to_string();
                         file_name.push_str(&hash_val);
                         file_name.push_str(".xml");
@@ -173,7 +175,7 @@ impl Clients
                     'i' => {
                         replyer_socket.send(&Self::getServerInfo(), 0).unwrap();
                     },
-                    _ => println!("Unknown command: {}", request)
+                    _ => printLog!("Unknown command: {}", request)
                 }
             }
         });
@@ -217,7 +219,7 @@ impl Clients
                     d.retain_mut(|d| d.id != drone_no);
                 }
                 _ => {
-                    println!("Unknown command: {}", msg);
+                    printLog!("Unknown command: {}", msg);
                 }
             }
         }
@@ -227,10 +229,10 @@ impl Clients
 
 impl Drop for Clients{
     fn drop(&mut self) {
-        println!("Dropping clients instance");
+        printLog!("Dropping clients instance");
         self.running.store(false, Ordering::SeqCst);
         self._replyer.take().unwrap().join().expect("Join error");
-        println!("Main client thread dropped");
+        printLog!("Main client thread dropped");
         let mut proxy = self._proxies.lock().unwrap();
         while let Some(handler) = proxy.pop()
         {
@@ -249,6 +251,6 @@ impl Drop for Clients{
             }
         }
         drop(control); 
-        println!("Clients instance dropped");
+        printLog!("Clients instance dropped");
     }
 }

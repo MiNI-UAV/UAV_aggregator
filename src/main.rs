@@ -15,9 +15,12 @@ pub mod map;
 pub mod cargo;
 pub mod notification;
 pub mod checksum;
+pub mod logger;
 
 fn main() {
     checksum::calcChecksum();
+    logger::Logger::startSession();
+
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -54,11 +57,11 @@ fn main() {
     while running.load(Ordering::SeqCst) {
         thread::sleep(time::Duration::from_millis(300));
     }
-    println!("Bye!");
+    printLog!("Bye!");
     stopSocket.send("TERMINATE", 0).unwrap();
     let mut drones_lck = _drones.lock().unwrap();
     drones_lck.removeAllUAV();
-    println!("All drone killed!");
+    printLog!("All drone killed!");
     drop(drones_lck);
     drop(_colision_detector);
     drop(_wind);
@@ -67,4 +70,6 @@ fn main() {
     drop(_drones);
     drop(_objects);
     drop(ctx);
+
+    logger::Logger::endSession();
 }

@@ -1,5 +1,7 @@
 use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time};
 use nalgebra::Vector3;
+use crate::printLog;
+
 
 
 #[derive(Debug)]
@@ -64,12 +66,12 @@ impl Objects
             listener_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
             let mut publisher_socket = ctx.socket(zmq::XPUB).expect("Pub socket error");
             publisher_socket.bind(format!("tcp://*:{}",port).as_str()).expect(format!("Bind error tcp {}",port).as_str());
-            println!("Object state proxy started on TCP: {}", port);
+            printLog!("Object state proxy started on TCP: {}", port);
             let mut stop_sub_socket = ctx.socket(zmq::SUB).unwrap();
             stop_sub_socket.set_subscribe(b"").unwrap();
             stop_sub_socket.connect("inproc://stop").unwrap();
             zmq::proxy_steerable(&mut listener_socket,&mut publisher_socket, &mut stop_sub_socket).unwrap();
-            println!("Closing objects proxy");
+            printLog!("Closing objects proxy");
         });
         let ctx = _ctx.clone();
         let time_access = time.clone();
@@ -187,7 +189,7 @@ impl Objects
         command.push_str(&force[1].to_string());
         command.push(',');
         command.push_str(&force[2].to_string());
-        //println!("{}",command);
+        //printLog!("{}",command);
         self._sendControlMsg(&command);
     }
 
@@ -209,7 +211,7 @@ impl Objects
         command.push_str(&normalVector[1].to_string());
         command.push(',');
         command.push_str(&normalVector[2].to_string());
-        //println!("{}", command);
+        //printLog!("{}", command);
         self._sendControlMsg(&command);
     }
 
@@ -258,11 +260,11 @@ impl Objects
 
 impl Drop for Objects {
     fn drop(&mut self) {
-        println!("Dropping objects instance");
+        printLog!("Dropping objects instance");
         self.running.store(false, Ordering::SeqCst);
         loop {
             match self._drop_physic.try_wait() {
-                Err(E) => println!("{}", E),
+                Err(E) => printLog!("{}", E),
                 Ok(None) =>
                 {
                     self._sendControlMsg("s");
@@ -276,6 +278,6 @@ impl Drop for Objects {
         }
         self._state_proxy.take().unwrap().join().expect("Join error");
         self._state_cupturer.take().unwrap().join().expect("Join error");
-        println!("Objects instance dropped")
+        printLog!("Objects instance dropped")
     } 
 }

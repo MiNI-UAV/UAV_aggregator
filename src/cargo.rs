@@ -2,6 +2,8 @@ use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Or
 use nalgebra::{Vector3,geometry::Rotation3};
 use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, config::ServerConfig, notification::Notification};
+use crate::printLog;
+
 
 struct Link
 {
@@ -103,7 +105,7 @@ impl Cargo
                         
                 #[allow(unused_variables)]
                 let elapsed = start.elapsed();
-                //println!("Cargo calc time: {} ms", elapsed.as_millis());
+                //printLog!("Cargo calc time: {} ms", elapsed.as_millis());
                 counter = (counter+1)%10000;
                 thread::sleep(time::Duration::from_millis(5));
             }
@@ -153,9 +155,9 @@ fn notifyAboutLinks(links: &HashMap<(usize, usize), Link>){
 
 impl Drop for Cargo{
     fn drop(&mut self) {
-        println!("Dropping cargo instance");
+        printLog!("Dropping cargo instance");
         self.running.store(false, Ordering::SeqCst);
         self.collision_checker.take().unwrap().join().expect("Join error");
-        println!("Cargo instance dropped");
+        printLog!("Cargo instance dropped");
     }
 }
