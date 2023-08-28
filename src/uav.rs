@@ -5,6 +5,7 @@ use crate::config::DroneConfig;
 use crate::printLog;
 
 
+
 pub struct DroneState
 {
     time: f32,
@@ -23,7 +24,12 @@ impl DroneState {
         self.pos.fixed_view::<3, 1>(0, 0).into()
     }
 
-    pub fn getOri(&self) -> Vector3<f32>
+    pub fn getOri(&self) -> Vector4<f32>
+    {
+        self.pos.fixed_view::<4, 1>(3, 0).into()
+    }
+
+    pub fn getOriRPY(&self) -> Vector3<f32>
     {
         let q: Vector4<f32> = self.pos.fixed_view::<4, 1>(3, 0).into();
         Self::quaterionsToRPY(q)
