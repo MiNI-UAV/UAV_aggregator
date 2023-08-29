@@ -18,6 +18,7 @@ macro_rules! printLog
         let mut log_file = crate::logger::LOG_FILE.lock().unwrap();
         if let Some(file) = log_file.as_mut()
         {
+            std::io::Write::write(file,format!("[{:-^15}] ", "Server").as_bytes()).unwrap();
             std::io::Write::write(file,format!($($arg)*).as_bytes()).expect("Unable to write log");
             std::io::Write::write(file,b"\n").unwrap();
         }
@@ -68,6 +69,17 @@ impl Logger
         if !session.is_empty()
         {
             remove_file("./logs/session").expect("Unable to remove session file.");
+        }
+    }
+
+    pub fn print(source: &str, msg: &str)
+    {
+        let mut log_file = crate::logger::LOG_FILE.lock().unwrap();
+        if let Some(file) = log_file.as_mut()
+        {
+            file.write(format!("[{:-^15}] ", source).as_bytes()).unwrap();
+            file.write(msg.as_bytes()).expect("Unable to write log");
+            file.write(b"\n").unwrap();
         }
     }
 }

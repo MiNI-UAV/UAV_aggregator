@@ -1,6 +1,6 @@
-use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}};
+use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
 use nalgebra::{Vector3,Vector6, SVector, Vector4};
-use crate::objects::Objects;
+use crate::{objects::Objects, logger};
 use crate::config::DroneConfig;
 use crate::printLog;
 
@@ -85,8 +85,8 @@ pub struct UAV
     pub config : DroneConfig,
 
     objects_arc: Arc<Mutex<Objects>>,  
-    simulation: Child,
-    controller: Child,
+    simulationListener: Option<JoinHandle<()>>,
+    controllerListener: Option<JoinHandle<()>>,
     steer_socket: zmq::Socket,
     control_socket: zmq::Socket,
     state_listener: Option<JoinHandle<()>>
@@ -96,6 +96,43 @@ impl UAV
 {
     pub fn new(_ctx: &mut zmq::Context,id : usize , name: &str, config_path: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
         let config = DroneConfig::parse(&config_path).expect("Config file error");
+
+        let simulation = Command::new("../UAV_physics_engine/build/uav")
+            .arg("-c").arg(&config_path)
+            .arg("-n").arg(name)
+            .arg("2>&1")
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to execute simulation process");
+
+        let controller = Command::new("../UAV_controller/build/controller")
+            .arg("-c").arg(&config_path)
+            .arg("-n").arg(name)
+            .arg("2>&1")
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to execute controller process");
+
+
+        let spawnListener = |source: Child ,source_name: String|
+        {
+            thread::spawn(move || {
+                let stdout = source.stdout.unwrap();
+                let reader = BufReader::new(stdout);
+                for line in reader.lines()
+                {
+                    if let Ok(content) = line
+                    {
+                        logger::Logger::print(&source_name, &content);
+                    }
+                }
+            })
+        };
+
+        let simulationListener = spawnListener(simulation, format!("{} - ctrl",name));
+        let controllerListener = spawnListener(controller, format!("{} - sim",name));
+
+
         let mut uav = UAV 
         {
             id,
@@ -108,19 +145,9 @@ impl UAV
 
             objects_arc: objects,
 
-            simulation: Command::new("../UAV_physics_engine/build/uav")
-            .arg("-c").arg(&config_path)
-            .arg("-n").arg(name)
-            .stdout(Stdio::null())
-            .spawn()
-            .expect("failed to execute simulation process"),
+            simulationListener: Some(simulationListener),
 
-            controller: Command::new("../UAV_controller/build/controller")
-            .arg("-c").arg(&config_path)
-            .arg("-n").arg(name)
-            .stdout(Stdio::null())
-            .spawn()
-            .expect("failed to execute controller process"),
+            controllerListener: Some(controllerListener),
 
             steer_socket:  _ctx.socket(zmq::REQ)
                                 .expect("creating socket error"),
@@ -353,8 +380,8 @@ impl Drop for UAV {
     fn drop(&mut self) {
         printLog!("Dropping drone: {}", self.name);
         self._sendSteeringMsg("c:exit");
-        self.simulation.wait().expect("sim wait");
-        self.controller.wait().expect("controller wait");
+        self.simulationListener.take().unwrap().join().expect("sim wait");
+        self.controllerListener.take().unwrap().join().expect("controller wait");
         printLog!("Drone eliminated: {}!", self.name); 
     } 
 }
