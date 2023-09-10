@@ -3,7 +3,7 @@ map: de_dust2
 map_offset: 30
 
 #collisions
-grid: 20, 20, 3
+grid: 100, 100, 10
 collisionPlusEps: 0.1
 collisionMinusEps: -0.3
 sphereRadius: 0.1
@@ -15,8 +15,8 @@ minimalDist: 1.0
 timeout_limit: 10
 
 #wind
-wind_matrix: 0.0, 0.0, 0.5; 0.0, 0.0, 0.2; 0.0, 0.0, 0.0
-wind_bias: 1.0, 1.0, 0.0
+wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
+wind_bias: 0.0, 0.0, 0.0
 
 #connection
 hb_disconnect: 3

@@ -80,6 +80,7 @@ impl Logger
             file.write(format!("[{:-^15}] ", source).as_bytes()).unwrap();
             file.write(msg.as_bytes()).expect("Unable to write log");
             file.write(b"\n").unwrap();
+            println!("[{:-^15}] {}", source, msg);
         }
     }
 }

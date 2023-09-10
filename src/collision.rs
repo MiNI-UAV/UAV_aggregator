@@ -1,5 +1,5 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
-use nalgebra::{Vector3,Vector4,geometry::Rotation3, Matrix3xX, Matrix3};
+use nalgebra::{Vector3,Vector4,geometry::Rotation3, Matrix3};
 use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig};
 use crate::printLog;
@@ -232,7 +232,7 @@ impl CollisionDetector
     }
 
     fn impulse_collision_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>, drones_rotor_pos: &Vec<Matrix3xX<f32>>, map: &Map)
+        drones: &Arc<Mutex<Drones>>, drones_rotor_pos: &Vec<Vec<Vector3<f32>>>, map: &Map)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
         let offset: nalgebra::Matrix<f32, nalgebra::Const<3>, nalgebra::Const<1>, nalgebra::ArrayStorage<f32, 3, 1>> = Vector3::new(0.0,0.0,map.sphereRadius);
@@ -242,12 +242,12 @@ impl CollisionDetector
         {
             let rot = Self::quaterionToRot3(ori);
             //For every point of drone
-            for point in rotor_pos.column_iter()
+            for point in rotor_pos.iter()
             .map(|r| rot*(r-offset)  + pos)
             {  
                 collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
             }
-            for point in rotor_pos.column_iter()
+            for point in rotor_pos.iter()
             .map(|r| rot*  (r-offset) + pos)
             {  
                 collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));

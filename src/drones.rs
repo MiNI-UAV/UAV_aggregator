@@ -1,5 +1,5 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
-use nalgebra::{Vector3,Vector4, Matrix3xX, DVector};
+use nalgebra::{Vector3,Vector4, DVector};
 use crate::{uav::{UAV,DroneState}, notification::Notification};
 use crate::objects::Objects;
 use crate::config::ServerConfig;
@@ -202,14 +202,16 @@ impl Drones
         pos
     }
 
-    pub fn getRotorPos(&self) -> Vec<Matrix3xX<f32>>
+    pub fn getRotorPos(&self) -> Vec<Vec<Vector3<f32>>>
     {
-        let mut rotor_pos = Vec::<Matrix3xX<f32>>::new();
+        let mut rotor_pos = Vec::new();
         let drone = self.drones.lock().unwrap();
         if !drone.is_empty()
         {
             for elem in drone.iter()  {
-                rotor_pos.push(elem.config.rotors.positions.clone());
+                let positions = 
+                    elem.config.rotors.iter().map(|r| {r.position}).collect();
+                rotor_pos.push(positions);
             }
         }
         drop(drone);

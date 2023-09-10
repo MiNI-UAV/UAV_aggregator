@@ -1,8 +1,8 @@
 clc;clear; close all
-num = 7;
-ahrs = readmatrix(num2str(num) + "/ahrs.csv");
-env = readmatrix(num2str(num) + "/env.csv");
-ekf = readmatrix(num2str(num) + "/EKF.csv");
+num = 1693578286;
+ahrs = readmatrix(num2str(num) + "/Maurice/ahrs.csv");
+env = readmatrix(num2str(num) + "/Maurice/env.csv");
+ekf = readmatrix(num2str(num) + "/Maurice/EKF.csv");
 
 % 
 % figure(10)
@@ -20,26 +20,26 @@ ekf = readmatrix(num2str(num) + "/EKF.csv");
 % hold on
 % plot(env(:,1),env(:,16))
 
-% figure(7)
-% plot(ahrs(:,1),ahrs(:,2))
-% hold on
-% plot(env(:,1),env(:,5))
-% legend("ahrs", "env")
-% title("Roll")
-% 
-% figure(8)
-% plot(ahrs(:,1),ahrs(:,3))
-% hold on
-% plot(env(:,1),env(:,6))
-% legend("ahrs", "env")
-% title("Pitch")
-% 
-% figure(9)
-% plot(ahrs(:,1),ahrs(:,4))
-% hold on
-% plot(env(:,1),env(:,7))
-% legend("ahrs", "env")
-% title("Yaw")
+figure(7)
+plot(ahrs(:,1),ahrs(:,2))
+hold on
+plot(env(:,1),env(:,5))
+legend("ahrs", "env")
+title("Roll")
+
+figure(8)
+plot(ahrs(:,1),ahrs(:,3))
+hold on
+plot(env(:,1),env(:,6))
+legend("ahrs", "env")
+title("Pitch")
+
+figure(9)
+plot(ahrs(:,1),ahrs(:,4))
+hold on
+plot(env(:,1),env(:,7))
+legend("ahrs", "env")
+title("Yaw")
 
 % figure(97)
 % plot(ahrs(:,1),ahrs(:,5))

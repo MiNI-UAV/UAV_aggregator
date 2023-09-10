@@ -2,7 +2,7 @@ use std::sync::atomic::{self, AtomicBool};
 use std::{fs::File, sync::Mutex};
 use std::io::Read;
 use xmltree::Element;
-use nalgebra::{Vector3, Matrix3xX};
+use nalgebra::Vector3;
 
 const CONFIG_FILE_PATH: &str = "configs/config.yaml";
 
@@ -74,7 +74,8 @@ pub struct DroneConfig {
     pub drone_type: String,
     pub mass: f32,
     pub inertia: Inertia,
-    pub rotors: Rotors,
+    pub noOfRotors: usize,
+    pub rotors: Vec<Rotor>,
     pub aero: Aero,
     pub pid: PID,
     pub control: Control,
@@ -93,13 +94,12 @@ pub struct Inertia {
 }
 
 #[derive(Clone)]
-pub struct Rotors {
-    pub num: u32,
+pub struct Rotor {
     pub force_coeff: f32,
     pub torque_coeff: f32,
-    pub positions: Matrix3xX<f32>,
-    pub direction: Vec<i32>,
-    pub time_constants: Vec<f32>,
+    pub position: Vector3<f32>,
+    pub direction: isize,
+    pub time_constant: f32,
 }
 
 #[derive(Clone)]
@@ -150,13 +150,16 @@ impl DroneConfig {
         // Parse the XML content
         let root = Element::parse(contents.as_bytes())?;
 
+        let rotors = parse_rotors(root.get_child("rotors").unwrap());
+
         // Create a DroneConfig instance and populate its fields
         let config = DroneConfig {
             name: root.get_child("name").unwrap().get_text().unwrap().to_string(),
             drone_type: root.get_child("type").unwrap().get_text().unwrap().to_string(),
             mass: root.get_child("ineria").unwrap().get_child("mass").unwrap().get_text().unwrap().parse()?,
             inertia: parse_inertia(root.get_child("ineria").unwrap()),
-            rotors: parse_rotors(root.get_child("rotors").unwrap()),
+            noOfRotors: rotors.len(),
+            rotors,
             aero: parse_aero(root.get_child("aero").unwrap()),
             pid: parse_pid(root.get_child("PID").unwrap()),
             control: parse_control(root.get_child("control").unwrap()),
@@ -179,69 +182,34 @@ fn parse_inertia(inertia_elem: &Element) -> Inertia {
     }
 }
 
-fn parse_rotors(rotors_elem: &Element) -> Rotors {
-    let num = rotors_elem.get_child("no").unwrap().get_text().unwrap().parse().unwrap();
-    let force_coeff = rotors_elem.get_child("forceCoff").unwrap().get_text().unwrap().parse().unwrap();
-    let torque_coeff = rotors_elem.get_child("torqueCoff").unwrap().get_text().unwrap().parse().unwrap();
+fn parse_rotors(rotors_elem: &Element) -> Vec<Rotor> {
 
-    let positions_elem = rotors_elem.get_child("positions").unwrap();
-    let positions = positions_elem
-        .children
-        .iter()
-        .map(|item| {
-            let values: Vec<f32> = item
-                .as_element()
-                .unwrap()
-                .get_text()
-                .unwrap()
+    let mut rotors = Vec::new();
+
+
+
+    for rotor_node in &rotors_elem.children
+    {
+        let rotor = Rotor { 
+            position: Vector3::<f32>::from_vec( 
+                rotor_node.as_element().unwrap().get_child("position").unwrap().get_text().unwrap()
                 .split_whitespace()
                 .map(|value| value.parse().unwrap())
-                .collect();
-            Vector3::<f32>::from_vec(values)
-        });
-    let mut posistion_matrix = Matrix3xX::<f32>::zeros(positions.len());
-    for (i,elem) in positions.enumerate()    
-    {
-        posistion_matrix.column_mut(i).copy_from(&elem);
-    }
-    let direction = rotors_elem
-        .get_child("direction")
-        .unwrap()
-        .children
-        .iter()
-        .map(|item| item.as_element().unwrap().get_text().unwrap().parse().unwrap())
-        .collect();
-
-    let time_constants = rotors_elem
-        .get_child("timeConstants")
-        .unwrap()
-        .children
-        .iter()
-        .map(|item| item.as_element().unwrap().get_text().unwrap().parse().unwrap())
-        .collect();
-
-    Rotors {
-        num,
-        force_coeff,
-        torque_coeff,
-        positions: posistion_matrix,
-        direction,
-        time_constants,
-    }
+                .collect()),
+            force_coeff: rotor_node.as_element().unwrap().get_child("forceCoff").unwrap().get_text().unwrap().parse().unwrap(),
+            torque_coeff: rotor_node.as_element().unwrap().get_child("torqueCoff").unwrap().get_text().unwrap().parse().unwrap(),
+            direction: rotor_node.as_element().unwrap().get_child("direction").unwrap().get_text().unwrap().parse().unwrap(),
+            time_constant: rotor_node.as_element().unwrap().get_child("timeConstant").unwrap().get_text().unwrap().parse().unwrap(),
+        };
+        rotors.push(rotor);
+    } rotors
 }
 
-fn parse_aero(aero_elem: &Element) -> Aero {
+fn parse_aero(_aero_elem: &Element) -> Aero {
     Aero {
-        s: aero_elem.get_child("S").unwrap().get_text().unwrap().parse().unwrap(),
-        d: aero_elem.get_child("d").unwrap().get_text().unwrap().parse().unwrap(),
-        c: aero_elem
-            .get_child("C")
-            .unwrap()
-            .get_text()
-            .unwrap()
-            .split_whitespace()
-            .map(|value| value.parse().unwrap())
-            .collect(),
+        s: 0.0,
+        d: 0.0,
+        c: Vec::new()
     }
 }
 

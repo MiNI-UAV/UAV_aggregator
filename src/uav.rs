@@ -68,9 +68,12 @@ impl ToString for DroneState {
             result.push_str(&self.vel[i].to_string());
             result.push(','); 
         }
-        for elem in &self.om {
-            result.push_str(&elem.to_string());
-            result.push(','); 
+        if self.om.len() > 0
+        {
+            for elem in &self.om {
+                result.push_str(&elem.to_string());
+                result.push(','); 
+            }
         }
         result.pop();
         result
@@ -129,8 +132,8 @@ impl UAV
             })
         };
 
-        let simulationListener = spawnListener(simulation, format!("{} - ctrl",name));
-        let controllerListener = spawnListener(controller, format!("{} - sim",name));
+        let simulationListener = spawnListener(simulation, format!("{} - sim",name));
+        let controllerListener = spawnListener(controller, format!("{} - ctrl",name));
 
 
         let mut uav = UAV 
@@ -178,6 +181,7 @@ impl UAV
             let socket = _ctx.socket(zmq::SUB).expect("state sub error");
             socket.set_conflate(true).expect("socket setting error");
             socket.set_subscribe(topic.as_bytes()).unwrap();
+            socket.set_rcvtimeo(1).unwrap();
             socket.connect(&state_address).expect("state connect error");
             socket
         };
@@ -218,30 +222,42 @@ impl UAV
         uav.state_listener = Option::Some(thread::spawn(move || {
             let mut msg = zmq::Message::new();
             loop {
+                let mut t = 0.0f32;
+                let mut pos = SVector::<f32,7>::zeros();
+                let mut vel = Vector6::zeros();
+                let mut om: Vec<f32> = Vec::new();
 
-                t_socket.recv(&mut msg, 0).unwrap();
-                let s = msg.as_str().unwrap();
-                //printLog!("{}", s);
-                let t = s[2..].parse::<f32>().expect("parse t error");
+                if let Ok(_) = t_socket.recv(&mut msg, 0)
+                {
+                    let s = msg.as_str().unwrap();
+                    //printLog!("{}", s);
+                    t = s[2..].parse::<f32>().expect("parse t error");
+                }
 
-                pos_socket.recv(&mut msg, 0).unwrap();
-                let s = msg.as_str().unwrap();
-                //printLog!("{}", s);
-                let pos = parseToArray7(s,4);
+                if let Ok(_) = pos_socket.recv(&mut msg, 0)
+                {
+                    let s = msg.as_str().unwrap();
+                    //printLog!("{}", s);
+                    pos = parseToArray7(s,4);
+                }
 
-                vel_socket.recv(&mut msg, 0).unwrap();
+                if let Ok(_) = vel_socket.recv(&mut msg, 0)
+                {
                 let s = msg.as_str().unwrap();
-                //printLog!("{}", s);
-                let vel = parseToArray(s,3);
+                    //printLog!("{}", s);
+                    vel = parseToArray(s,3);
+                }
 
-                om_socket.recv(&mut msg, 0).unwrap();
-                let s = msg.as_str().unwrap();
-                let trimmed_input = &s[3..];
-                let om: Vec<f32> = trimmed_input
+                if let Ok(_) = om_socket.recv(&mut msg, 0)
+                {
+                    let s = msg.as_str().unwrap();
+                    let trimmed_input = &s[3..];
+                    om = trimmed_input
                         .split(',')
                         .map(|item| item.trim().parse::<f32>())
                         .filter_map(Result::ok)
                         .collect();
+                }
                 
                 let mut state = state.lock().unwrap();
                 state.time = t;
