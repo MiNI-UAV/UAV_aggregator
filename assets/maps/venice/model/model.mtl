@@ -1,0 +1,382 @@
+# Blender 3.5.0 MTL File: 'None'
+# www.blender.org
+
+newmtl TEX_sr1cas1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1cas1.png
+
+newmtl TEX_sr1cas2
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1cas2.png
+
+newmtl TEX_sr1etc1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1etc1.png
+
+newmtl TEX_sr1etc2
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1etc2.png
+
+newmtl TEX_sr1fen1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.001
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.002
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.003
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.004
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.005
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.006
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.007
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.008
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.017
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.026
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.035
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.044
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.053
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.062
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.071
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen1.080
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen1.png
+
+newmtl TEX_sr1fen2
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1fen2.png
+
+newmtl TEX_sr1obj2_1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1obj2_1.png
+
+newmtl TEX_sr1obj2_1_001
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1obj2_1.png
+
+newmtl TEX_sr1obj2_1_002
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1obj2_1.png
+
+newmtl TEX_sr1obj2_1_003
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1obj2_1.png
+
+newmtl TEX_sr1roa1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1roa1.png
+
+newmtl TEX_sr1roa2
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1roa2.png
+
+newmtl TEX_sr1roa3
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1roa3.png
+
+newmtl TEX_sr1roo1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1roo1.png
+
+newmtl TEX_sr1sav1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sav1.png
+
+newmtl TEX_sr1sho1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sho1.png
+
+newmtl TEX_sr1sho2
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sho2.png
+
+newmtl TEX_sr1sho3
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sho3.png
+
+newmtl TEX_sr1sho4
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sho4.png
+
+newmtl TEX_sr1sky1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1sky1.png
+
+newmtl TEX_sr1tow1
+Ns 92.156860
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/sr1tow1.png
+
+newmtl TEX_sr1wat1
+Ns 94.117653
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd /home/faliszewskii/Pobrane/mac-anu-r1/source/Mac_Anu_R1/H:/Games/Dot Hack Complete Series/Dot Hack 4 Quarantine/New folder (2)/wat1/TEX_sr1wat1.png
