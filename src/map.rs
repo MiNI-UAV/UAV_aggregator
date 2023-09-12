@@ -69,6 +69,34 @@ impl Map
         normalsInColisionPoint
     }
 
+    pub fn checkWallsBest(&self, point: Vector3<f32>) -> Option<Vector3<f32>>
+    {
+        let mut bestNormal = Vector3::<f32>::zeros();
+        let mut bestDepth = self.collisionPlusEps;
+        let chunk = self.calcChunk(point);
+        if let Some(faces) = self.facesInChunk.get(&chunk)
+        {
+            for face in faces {
+                if let (true, dist) = face.projectPoint(point)
+                {
+                    if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+                    {
+                        if dist < bestDepth
+                        {
+                            bestDepth = dist;
+                            bestNormal = face.normal;
+                        }
+                    }
+                }
+            }
+        }
+        if bestDepth < self.collisionPlusEps
+        {
+            return Some(bestNormal);
+        }
+        None
+    }
+
     fn calcChunk(&self, point: Vector3<f32>) -> Vector3<usize>
     {
         let pos =  (point -  self._min).component_div(&self._step);

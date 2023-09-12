@@ -245,6 +245,10 @@ impl CollisionDetector
             let points = rot*mesh;
             points.column_iter().for_each(|col| {
                 let point = col + pos;
+                if let Some(normal) = map.checkWallsBest(point)
+                {
+                    collisionsToSend.push((*id,point,normal));
+                }
                 collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
             });
         }
