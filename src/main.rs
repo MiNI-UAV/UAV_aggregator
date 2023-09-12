@@ -11,6 +11,7 @@ pub mod wind;
 pub mod collision;
 pub mod objects;
 pub mod config;
+pub mod obj;
 pub mod map;
 pub mod cargo;
 pub mod notification;

@@ -1,14 +1,14 @@
-use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
-use nalgebra::{Vector3,Vector4,geometry::Rotation3, Matrix3};
+use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time, collections::HashMap};
+use nalgebra::{Vector3,Vector4,geometry::Rotation3, Matrix3, DMatrix};
 use std::time::Instant;
-use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig};
+use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj};
 use crate::printLog;
 
 
 pub struct CollisionDetector
 {
     running: Arc<AtomicBool>,
-    collision_checker: Option<thread::JoinHandle<()>>,
+    collision_checker: Option<thread::JoinHandle<()>>
 }
 
 impl CollisionDetector
@@ -50,11 +50,12 @@ impl CollisionDetector
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
+            let mut meshes = HashMap::<String,DMatrix<f32>>::new();
             while r.load(Ordering::SeqCst) {
                 let start = Instant::now();
                 let drones_lck = _drones.lock().unwrap();
                 let drones_pos_vel = drones_lck.getPosOriVels();
-                let drones_rotor_pos = drones_lck.getRotorPos();
+                let types = drones_lck.getTypes();
                 drop(drones_lck);
 
                 let obj_lck = _objects.lock().unwrap();
@@ -67,7 +68,7 @@ impl CollisionDetector
                 
                 
                 //Drone collision with map3
-                Self::impulse_collision_drone(&drones_pos_vel,&_drones, &drones_rotor_pos,&map);
+                Self::impulse_collision_drone(&drones_pos_vel,&_drones,&mut meshes, &types,&map);
                 Self::impulse_collision_projectiles(&objs_pos_vels,&_objects,&map);
                 //Second box
                 Self::boundary_box_obj(&objs_pos_vels, &_objects, box_min, box_max);
@@ -84,7 +85,7 @@ impl CollisionDetector
             }
         });
         CollisionDetector {running,
-             collision_checker: Some(collision_checker),
+             collision_checker: Some(collision_checker)
             }
     }
 
@@ -232,26 +233,20 @@ impl CollisionDetector
     }
 
     fn impulse_collision_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>, drones_rotor_pos: &Vec<Vec<Vector3<f32>>>, map: &Map)
+        drones: &Arc<Mutex<Drones>>,meshes: &mut HashMap<String,DMatrix<f32>>, types: &Vec<String>, map: &Map)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
-        let offset: nalgebra::Matrix<f32, nalgebra::Const<3>, nalgebra::Const<1>, nalgebra::ArrayStorage<f32, 3, 1>> = Vector3::new(0.0,0.0,map.sphereRadius);
         
         //For every drone
-        for ((id, pos, ori, _, _),rotor_pos) in objs_pos_vels.iter().zip(drones_rotor_pos.iter())
+        for ((id, pos, ori, _, _),drone_type) in objs_pos_vels.iter().zip(types.iter())
         {
             let rot = Self::quaterionToRot3(ori);
-            //For every point of drone
-            for point in rotor_pos.iter()
-            .map(|r| rot*(r-offset)  + pos)
-            {  
+            let mesh = getMesh(meshes,drone_type);
+            let points = rot*mesh;
+            points.column_iter().for_each(|col| {
+                let point = col + pos;
                 collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
-            }
-            for point in rotor_pos.iter()
-            .map(|r| rot*  (r-offset) + pos)
-            {  
-                collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
-            }
+            });
         }
         if !collisionsToSend.is_empty()
         {
@@ -263,6 +258,16 @@ impl CollisionDetector
         }
     }
 
+}
+
+fn getMesh<'a>(meshes: &'a mut HashMap<String, DMatrix<f32>>, drone_type: & str) -> &'a DMatrix<f32> {
+    if !meshes.contains_key(drone_type)
+    {
+        let drone_model = Obj::load_from_file(format!("./assets/drones/{}/model/model.obj", drone_type).as_str(),true);
+        let mesh = drone_model.getMesh();
+        meshes.insert(drone_type.to_string(), mesh);
+    }
+    meshes.get(drone_type).unwrap()
 }
 
 impl Drop for CollisionDetector{

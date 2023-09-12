@@ -202,20 +202,19 @@ impl Drones
         pos
     }
 
-    pub fn getRotorPos(&self) -> Vec<Vec<Vector3<f32>>>
+    pub fn getTypes(&self) -> Vec<String>
     {
-        let mut rotor_pos = Vec::new();
+        let mut types = Vec::new();
         let drone = self.drones.lock().unwrap();
         if !drone.is_empty()
         {
             for elem in drone.iter()  {
-                let positions = 
-                    elem.config.rotors.iter().map(|r| {r.position}).collect();
-                rotor_pos.push(positions);
+
+                types.push(elem.config.drone_type.to_owned());
             }
         }
         drop(drone);
-        rotor_pos
+        types
     }
 
     pub fn updateForce(&self, id: &usize, force: &Vector3<f32>, torque: &Vector3<f32>)
