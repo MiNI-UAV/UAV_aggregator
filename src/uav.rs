@@ -1,6 +1,6 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
 use nalgebra::{Vector3,Vector6, SVector, Vector4};
-use crate::{objects::Objects, logger};
+use crate::{objects::Objects, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
 use crate::printLog;
 
@@ -292,15 +292,21 @@ impl UAV
         }      
     }
 
-    pub fn sendWind(&self, wind: &Vector3<f32>)
+    pub fn sendAtmosphereInfo(&self, info: &AtmosphereInfo)
     {
         let mut command = String::with_capacity(30);
-        command.push_str("w:");
-        command.push_str(&wind[0].to_string());
+        command.push_str("a:");
+        command.push_str(&info.wind[0].to_string());
         command.push(',');
-        command.push_str(&wind[1].to_string());
+        command.push_str(&info.wind[1].to_string());
         command.push(',');
-        command.push_str(&wind[2].to_string());
+        command.push_str(&info.wind[2].to_string());
+        command.push(',');
+        command.push_str(&info.air_temperature.to_string());
+        command.push(',');
+        command.push_str(&info.air_pressure.to_string());
+        command.push(',');
+        command.push_str(&info.air_density.to_string());
         self._sendControlMsg(&command);
     }
 

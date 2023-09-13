@@ -7,7 +7,7 @@ use device_query::{DeviceEvents, DeviceState};
 pub mod clients;
 pub mod drones;
 pub mod uav;
-pub mod wind;
+pub mod atmosphere;
 pub mod collision;
 pub mod objects;
 pub mod config;
@@ -52,7 +52,7 @@ fn main() {
     let _cargo = Arc::new(Mutex::new(cargo::Cargo::new(_drones.clone(), _objects.clone())));
     let _clients = clients::Clients::new(ctx.clone(),_drones.clone(), _cargo.clone());
 
-    let _wind = wind::Wind::new(_drones.clone(),_objects.clone());
+    let _atmosphere = atmosphere::Atmosphere::new(_drones.clone(),_objects.clone());
     let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone());
 
     while running.load(Ordering::SeqCst) {
@@ -65,7 +65,7 @@ fn main() {
     printLog!("All drone killed!");
     drop(drones_lck);
     drop(_colision_detector);
-    drop(_wind);
+    drop(_atmosphere);
     drop(_clients);
     drop(_cargo);
     drop(_drones);

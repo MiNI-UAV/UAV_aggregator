@@ -1,5 +1,5 @@
 #map
-map: de_dust2
+map: venice
 map_offset: 30
 
 #collisions
@@ -14,7 +14,9 @@ mi_d: 0.3
 minimalDist: 1.0
 timeout_limit: 10
 
-#wind
+#atmosphere
+temperature: 288.15
+pressure: 101300.0
 wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
 
