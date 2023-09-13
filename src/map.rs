@@ -69,7 +69,7 @@ impl Map
         normalsInColisionPoint
     }
 
-    pub fn checkWallsBest(&self, point: Vector3<f32>) -> Option<Vector3<f32>>
+    pub fn checkWallsBest(&self, point: Vector3<f32>) -> Option<(f32,Vector3<f32>)>
     {
         let mut bestNormal = Vector3::<f32>::zeros();
         let mut bestDepth = self.collisionPlusEps;
@@ -92,7 +92,7 @@ impl Map
         }
         if bestDepth < self.collisionPlusEps
         {
-            return Some(bestNormal);
+            return Some((bestDepth,bestNormal));
         }
         None
     }

@@ -240,17 +240,28 @@ impl CollisionDetector
         //For every drone
         for ((id, pos, ori, _, _),drone_type) in objs_pos_vels.iter().zip(types.iter())
         {
+            let mut best_depth = f32::MAX;
+            let mut best_point: Vector3<f32> = Vector3::zeros();
+            let mut best_normal: Vector3<f32> = Vector3::zeros();
             let rot = Self::quaterionToRot3(ori);
             let mesh = getMesh(meshes,drone_type);
             let points = rot*mesh;
             points.column_iter().for_each(|col| {
                 let point = col + pos;
-                if let Some(normal) = map.checkWallsBest(point)
+                if let Some((depth,normal)) = map.checkWallsBest(point)
                 {
-                    collisionsToSend.push((*id,point,normal));
+                    if depth < best_depth
+                    {
+                        best_depth = depth;
+                        best_normal = normal;
+                        best_point = point;
+                    }
                 }
-                collisionsToSend.extend(map.checkWalls(point,0.0).iter().map(|n| (*id,point,n.clone())));
             });
+            if best_depth < f32::MAX
+            {
+                collisionsToSend.push((*id,best_point,best_normal));
+            }
         }
         if !collisionsToSend.is_empty()
         {
