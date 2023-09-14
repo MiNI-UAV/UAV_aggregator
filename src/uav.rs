@@ -396,6 +396,15 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
+    pub fn sendStartJet(&self, index: usize)
+    {
+        let mut command = String::with_capacity(10);
+        command.push_str("t:");
+        command.push_str(&index.to_string());
+        //printLog!("{}", command);
+        self._sendControlMsg(&command);
+    }
+
 }
 
 impl Drop for UAV {
