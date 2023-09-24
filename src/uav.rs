@@ -88,8 +88,8 @@ pub struct UAV
     pub config : DroneConfig,
 
     objects_arc: Arc<Mutex<Objects>>,  
-    simulationListener: Option<JoinHandle<()>>,
-    controllerListener: Option<JoinHandle<()>>,
+    simulationListener: Option<(JoinHandle<()>,JoinHandle<()>)>,
+    controllerListener: Option<(JoinHandle<()>,JoinHandle<()>)>,
     steer_socket: zmq::Socket,
     control_socket: zmq::Socket,
     state_listener: Option<JoinHandle<()>>
@@ -103,37 +103,58 @@ impl UAV
         let simulation = Command::new("../UAV_physics_engine/build/uav")
             .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
-            .arg("2>&1")
             .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("failed to execute simulation process");
 
         let controller = Command::new("../UAV_controller/build/controller")
             .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
-            .arg("2>&1")
             .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("failed to execute controller process");
 
 
-        let spawnListener = |source: Child ,source_name: String|
+        let spawnListener = 
+        |source: Child ,drone_name: &str, source_name: &str, color: &str|
         {
-            thread::spawn(move || {
-                let stdout = source.stdout.unwrap();
-                let reader = BufReader::new(stdout);
-                for line in reader.lines()
+            let stdout = source.stdout.unwrap();
+            let reader_stdout = BufReader::new(stdout);
+            let stderr = source.stderr.unwrap();
+            let reader_stderr = BufReader::new(stderr);
+
+            let drone_name1 = drone_name.to_owned();
+            let source_name1 = source_name.to_owned();
+            let color1 = color.to_owned();
+            let drone_name2 = drone_name.to_owned();
+            let source_name2 = source_name.to_owned();
+
+            (thread::spawn(move || {
+                for line in reader_stdout.lines()
                 {
                     if let Ok(content) = line
                     {
-                        logger::Logger::print(&source_name, &content);
+                        logger::Logger::print(&drone_name1, &source_name1, &color1, &content);
                     }
                 }
-            })
+            }),
+            thread::spawn(move || {
+                for line in reader_stderr.lines()
+                {
+                    if let Ok(content) = line
+                    {
+                        logger::Logger::print(&drone_name2, &source_name2, logger::COLOR_RED, &content);
+                    }
+                }
+            }))
         };
 
-        let simulationListener = spawnListener(simulation, format!("{} - sim",name));
-        let controllerListener = spawnListener(controller, format!("{} - ctrl",name));
+        let simulationListener = spawnListener(simulation, name,
+            "sim", logger::COLOR_GREEN);
+        let controllerListener = spawnListener(controller, name,
+            "ctrl", logger::COLOR_BLUE);
 
 
         let mut uav = UAV 
@@ -411,8 +432,12 @@ impl Drop for UAV {
     fn drop(&mut self) {
         printLog!("Dropping drone: {}", self.name);
         self._sendSteeringMsg("c:exit");
-        self.simulationListener.take().unwrap().join().expect("sim wait");
-        self.controllerListener.take().unwrap().join().expect("controller wait");
+        let sim = self.simulationListener.take().unwrap();
+        sim.0.join().expect("sim cout wait");
+        sim.1.join().expect("sim cerr wait");
+        let ctrl = self.controllerListener.take().unwrap();
+        ctrl.0.join().expect("ctrl cout wait");
+        ctrl.1.join().expect("ctrl cerr wait");
         printLog!("Drone eliminated: {}!", self.name); 
     } 
 }

@@ -19,8 +19,8 @@ pub mod checksum;
 pub mod logger;
 
 fn main() {
-    checksum::calcChecksum();
     logger::Logger::startSession();
+    checksum::calcChecksum();
 
     let ctx: zmq::Context = zmq::Context::new();
     let running = Arc::new(AtomicBool::new(true));
