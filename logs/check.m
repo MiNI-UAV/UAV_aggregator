@@ -1,8 +1,8 @@
 clc;clear; close all
-num = 1693578286;
-ahrs = readmatrix(num2str(num) + "/Maurice/ahrs.csv");
-env = readmatrix(num2str(num) + "/Maurice/env.csv");
-ekf = readmatrix(num2str(num) + "/Maurice/EKF.csv");
+num = 1695066304;
+ahrs = readmatrix(num2str(num) + "/Maurice_2/ahrs.csv");
+env = readmatrix(num2str(num) + "/Maurice_2/env.csv");
+ekf = readmatrix(num2str(num) + "/Maurice_2/EKF.csv");
 
 % 
 % figure(10)
@@ -19,27 +19,56 @@ ekf = readmatrix(num2str(num) + "/Maurice/EKF.csv");
 % plot(env(:,1),env(:,22))
 % hold on
 % plot(env(:,1),env(:,16))
+% 
+% env_RPY = zeros(size(env,1),3);
+% 
+% for i = 1:size(env,1)
+%     [env_RPY(i,1),env_RPY(i,2),env_RPY(i,3)] = quat2angle(env(i,5:8), 'XYZ');
+% end
 
-figure(7)
-plot(ahrs(:,1),ahrs(:,2))
-hold on
-plot(env(:,1),env(:,5))
-legend("ahrs", "env")
-title("Roll")
 
-figure(8)
-plot(ahrs(:,1),ahrs(:,3))
-hold on
-plot(env(:,1),env(:,6))
-legend("ahrs", "env")
-title("Pitch")
+% figure(7)
+% plot(ahrs(:,1),ahrs(:,2))
+% hold on
+% plot(env(:,1),env_RPY(:,1))
+% legend("ahrs", "env")
+% title("Roll")
+% 
+% figure(8)
+% plot(ahrs(:,1),ahrs(:,3))
+% hold on
+% plot(env(:,1),env_RPY(:,2))
+% legend("ahrs", "env")
+% title("Pitch")
+% 
+% figure(9)
+% plot(ahrs(:,1),ahrs(:,4))
+% hold on
+% plot(env(:,1),env_RPY(:,3))
+% legend("ahrs", "env")
+% title("Yaw")
 
-figure(9)
-plot(ahrs(:,1),ahrs(:,4))
+figure(4)
+plot(ahrs(:,1),ahrs(:,5))
 hold on
-plot(env(:,1),env(:,7))
+plot(env(:,1),env(:,12))
 legend("ahrs", "env")
-title("Yaw")
+title("GX")
+
+figure(5)
+plot(ahrs(:,1),ahrs(:,6))
+hold on
+plot(env(:,1),env(:,13))
+legend("ahrs", "env")
+title("GY")
+
+figure(6)
+plot(ahrs(:,1),ahrs(:,7))
+hold on
+plot(env(:,1),env(:,14))
+legend("ahrs", "env")
+title("GZ")
+
 
 % figure(97)
 % plot(ahrs(:,1),ahrs(:,5))
@@ -78,13 +107,13 @@ title("Yaw")
 % plot(env(:,1),env(:,3))
 % legend("ekf", "env")
 % title("Y")
-
-figure(3)
-plot(ekf(:,1),ekf(:,4))
-hold on
-plot(env(:,1),env(:,4))
-legend("ekf", "env")
-title("Z")
+% 
+% figure(3)
+% plot(ekf(:,1),ekf(:,4))
+% hold on
+% plot(env(:,1),env(:,4))
+% legend("ekf", "env")
+% title("Z")
 
 % 
 % figure(4)
@@ -101,10 +130,10 @@ title("Z")
 % legend("ekf", "env")
 % title("VY")
 % 
-figure(6)
-plot(ekf(:,1),ekf(:,7))
-hold on
-plot(env(:,1),env(:,10))
-legend("ekf", "env")
-title("VZ")
+% figure(6)
+% plot(ekf(:,1),ekf(:,7))
+% hold on
+% plot(env(:,1),env(:,10))
+% legend("ekf", "env")
+% title("VZ")
 
