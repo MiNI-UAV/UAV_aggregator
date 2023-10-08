@@ -1,0 +1,27 @@
+modes:
+  NONE:
+  # Quadcopter
+  QPOS:
+    reply:
+      - X
+      - Y
+      - Z
+      - YAW
+  QANGLE:
+    reply:
+      - ROLL
+      - PITCH
+      - YAW
+      - Z
+  QACRO:
+    reply:
+      - P
+      - Q
+      - R
+      - Z
+  # Fixed-wing aircraft
+  FMANUAL:
+    reply:
+  # Rocket
+  RMANUAL:
+    reply:
