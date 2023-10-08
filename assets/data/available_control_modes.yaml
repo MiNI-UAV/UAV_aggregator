@@ -1,5 +1,6 @@
 modes:
   NONE:
+    reply:
   # Quadcopter
   QPOS:
     reply:
