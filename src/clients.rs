@@ -215,6 +215,9 @@ impl Clients
                         cargo.addLink(drone_no, id as usize, 2.0, 5.0, Vector3::zeros());
                     }
                 }
+                "release" => {
+                    cargo.removeLink(drone_no);
+                }
                 "kill" => {  
                     d.retain_mut(|d| d.id != drone_no);
                 }

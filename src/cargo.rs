@@ -116,7 +116,6 @@ impl Cargo
     pub fn addLink(&self,drone_id: usize, obj_id: usize, length: f32, k: f32, hook_offset: Vector3<f32>)
     {
         let mut links_lck = self.links.lock().unwrap();
-        links_lck.retain(|(d_id,_),_| *d_id != drone_id);
         links_lck.insert((drone_id,obj_id), Link { timeout: 0, length, k, hook_offset});
         notifyAboutLinks(&links_lck);
         drop(links_lck);
