@@ -1,5 +1,5 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
-use nalgebra::{Vector3,Vector6, SVector, Vector4};
+use nalgebra::{Vector3,Vector6, SVector, Vector4, geometry::Rotation3};
 use crate::{objects::Objects, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
 use crate::printLog;
@@ -350,45 +350,90 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
-
-    pub fn dropOrShot(&self, mut mass: Option<f32>, mut speed: Option<f32>, mut CS: Option<f32>, mut r: Option<[f32;3]>) -> isize
+    pub fn releaseCargo(&self, index: usize) -> (isize,isize)
     {
-        //9mm bullet
-        // let mass = mass.get_or_insert(0.008);
-        // let speed = speed.get_or_insert(350.0);
-        // let CS = CS.get_or_insert(0.00001876708);
-        // let r = r.get_or_insert([0.0,0.0,0.1]);
+        if index >= self.config.cargo.len()
+        {
+            return (-10isize,0isize);
+        }
 
-        //paintball
-        let mass = mass.get_or_insert(0.003);
-        let speed = speed.get_or_insert(90.0);
-        let CS = CS.get_or_insert(0.47*0.000126645);
-        let r = r.get_or_insert([0.0,0.0,0.1]);
+        let cargo_param = self.config.cargo.get(index).unwrap();
 
         let mut command = String::with_capacity(30);
-        command.push_str("d:");
-        command.push_str(&mass.to_string());
-        command.push(',');
-        command.push_str(&speed.to_string());
-        command.push(',');
-        command.push_str(&r[0].to_string());
-        command.push(',');
-        command.push_str(&r[1].to_string());
-        command.push(',');
-        command.push_str(&r[2].to_string());
+        command.push_str("g:");
+        command.push_str(&index.to_string());
         let rep = self._sendControlMsg(&command);
+        let mut res = 0isize;
         let mut vel = Vector3::zeros();
         for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
         {
-            vel[i] = elem.parse::<f32>().unwrap();
+            if i == 0
+            {
+                res = elem.parse::<isize>().unwrap();
+            }
+            else
+            {
+                vel[i-1] = elem.parse::<f32>().unwrap();
+            }
         }
+
+        if res < 0
+        {
+            return (res,0isize);
+        }
+
         let state = self.state_arc.lock().unwrap();
-        let pos = state.getPos3();
+        let ori = state.getOriRPY();
+        let pos = state.getPos3() + 
+            Rotation3::from_euler_angles(ori.x, ori.y, ori.z)*cargo_param.hook;
         drop(state);
         let objects = self.objects_arc.lock().unwrap();
-        let id = objects.addObj(*mass, *CS, pos, vel);
+        let id = objects.addObj(cargo_param.mass, cargo_param.CS, pos, vel);
         drop(objects);
-        id
+        (res, id)
+    }
+
+    pub fn shootAmmo(&self, index: usize) -> (isize,isize)
+    {
+        if index >= self.config.ammo.len()
+        {
+            return (-10isize,0isize);
+        }
+
+        let ammo_param = self.config.ammo.get(index).unwrap();
+
+        let mut command = String::with_capacity(30);
+        command.push_str("d:");
+        command.push_str(&index.to_string());
+        let rep = self._sendControlMsg(&command);
+        let mut res = 0isize;
+        let mut vel = Vector3::zeros();
+        for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
+        {
+            if i == 0
+            {
+                res = elem.parse::<isize>().unwrap();
+            }
+            else
+            {
+                vel[i-1] = elem.parse::<f32>().unwrap();
+            }
+        }
+
+        if res < 0
+        {
+            return (res,0isize);
+        }
+
+        let state = self.state_arc.lock().unwrap();
+        let ori = state.getOriRPY();
+        let pos = state.getPos3() + 
+            Rotation3::from_euler_angles(ori.x, ori.y, ori.z)*ammo_param.position;
+        drop(state);
+        let objects = self.objects_arc.lock().unwrap();
+        let id = objects.addObj(ammo_param.mass, ammo_param.CS, pos, vel);
+        drop(objects);
+        (res, id)
     }
 
     pub fn sendSurfaceCollison(&self, COR: f32, mi_s: f32, mi_d: f32,

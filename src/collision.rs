@@ -67,7 +67,7 @@ impl CollisionDetector
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels,map.minimalDist);
                 
                 
-                //Drone collision with map3
+                //Drone collision with map
                 Self::impulse_collision_drone(&drones_pos_vel,&_drones,&mut meshes, &types,&map);
                 Self::impulse_collision_projectiles(&objs_pos_vels,&_objects,&map);
                 //Second box
