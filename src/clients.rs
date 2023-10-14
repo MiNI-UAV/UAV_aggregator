@@ -199,6 +199,7 @@ impl Clients
         let mut d = drones.drones.lock().unwrap();
         let mut rep = String::with_capacity(30);
         rep.push_str("ok");
+        //TODO: index in reciving param
         let index = 0;
         if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
         {

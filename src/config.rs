@@ -119,7 +119,7 @@ fn parse_ammo(element: &Element) -> AmmoParams {
     let radius = element.get_child("radius").unwrap().get_text().unwrap().parse().unwrap();
     let C0 = element.get_child("C0").unwrap().get_text().unwrap().parse().unwrap();
     let mass = element.get_child("mass").unwrap().get_text().unwrap().parse().unwrap();
-    let ammount = element.get_child("amount").unwrap().get_text().unwrap().parse().unwrap();
+    let ammount = element.get_child("ammount").unwrap().get_text().unwrap().parse().unwrap();
 
     AmmoParams {
         name,
@@ -148,7 +148,7 @@ fn parse_cargo(element: &Element) -> CargoParams {
     let radius = element.get_child("radius").unwrap().get_text().unwrap().parse().unwrap();
     let C0 = element.get_child("C0").unwrap().get_text().unwrap().parse().unwrap();
     let mass = element.get_child("mass").unwrap().get_text().unwrap().parse().unwrap();
-    let ammount = element.get_child("amount").unwrap().get_text().unwrap().parse().unwrap();
+    let ammount = element.get_child("ammount").unwrap().get_text().unwrap().parse().unwrap();
 
     CargoParams {
         name,

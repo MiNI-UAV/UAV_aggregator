@@ -1,6 +1,6 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time, collections::HashMap};
 use nalgebra::Vector3;
-use crate::printLog;
+use crate::{printLog, config::ServerConfig, notification::Notification};
 
 
 
@@ -10,6 +10,13 @@ pub struct ObjectState
     pub id: usize,
     pub pos: Vector3<f32>,
     pub vel: Vector3<f32>,
+}
+
+#[derive(Debug)]
+pub struct ObjectInfo
+{
+    pub model_name: String,
+    pub collision_radius: f32
 }
 
 impl ObjectState {
@@ -40,6 +47,7 @@ pub struct Objects
     _ctx: zmq::Context,
     pub _time: Arc<Mutex<f32>>,
     pub states: Arc<Mutex<Vec<ObjectState>>>,
+    pub info: Arc<Mutex<HashMap<usize,ObjectInfo>>>,
     running: Arc<AtomicBool>,
 
     control_socket: zmq::Socket,
@@ -58,6 +66,7 @@ impl Objects
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let states = Arc::new(Mutex::new(Vec::new()));
+        let info = Arc::new(Mutex::new(HashMap::new()));
         let time = Arc::new(Mutex::new(0.0));
         let ctx = _ctx.clone();
         let proxy: JoinHandle<()> = thread::spawn(move ||
@@ -76,6 +85,7 @@ impl Objects
         let ctx = _ctx.clone();
         let time_access = time.clone();
         let states_access = states.clone();
+        let info_access = info.clone();
         let capture: JoinHandle<()> = thread::spawn(move ||
         {
             let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
@@ -83,6 +93,8 @@ impl Objects
             capture_socket.set_rcvtimeo(1000).unwrap();
             capture_socket.set_conflate(true).unwrap();
             capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
+            let notify_type_scaler: usize = ServerConfig::get_usize("notifyObjTypeScaler");
+            let mut counter = 0;
             while r.load(Ordering::SeqCst) {
                 let mut obj_states_msg =  zmq::Message::new();
                 if let Err(_) = capture_socket.recv(&mut obj_states_msg, 0)
@@ -91,11 +103,17 @@ impl Objects
                 }
                 let obj_info = obj_states_msg.as_str().unwrap().to_string();
                 Self::parseInfo(&time_access,&states_access,obj_info);
+                counter = counter + 1;
+                if counter >= notify_type_scaler
+                {
+                    sendModelInfo(&info_access);
+                    counter = 0;
+                }
             }
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
-        Objects {_ctx: _ctx,_time: time,states: states, running: running, control_socket: control_socket,
+        Objects {_ctx: _ctx,_time: time,states: states,info, running: running, control_socket: control_socket,
              _drop_physic: drop_physic, _state_proxy: Some(proxy), _state_cupturer: Some(capture)}
     }
 
@@ -133,7 +151,7 @@ impl Objects
         rep.to_string()
     }
 
-    pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>) -> isize
+    pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>, obj_info: ObjectInfo) -> isize
     {
         let mut command = String::with_capacity(60);
         command.push_str("a:");
@@ -153,12 +171,24 @@ impl Objects
         command.push(',');
         command.push_str(&vel[2].to_string());
         let rep = self._sendControlMsg(&command);
-        rep.split(';').skip(1).next().get_or_insert("-1").parse::<isize>().unwrap()
+        let id = rep.split(';').skip(1).next().get_or_insert("-1").parse::<isize>().unwrap();
+        if id >= 0
+        {
+            if let Ok(mut info) = self.info.lock()
+            {
+                info.insert(id as usize, obj_info);
+            }
+        }
+        id
     }
 
     pub fn removeObj(&self, id: usize)
     {
         self._sendControlMsg(&format!("r:{}",id.to_string()));
+        if let Ok(mut info) = self.info.lock()
+        {
+            info.remove(&id);
+        }
     }
 
     pub fn updateWind(&self, wind: Vec<(usize,Vector3<f32>)>)
@@ -255,6 +285,44 @@ impl Objects
         }
         drop(state);
         posvel
+    }
+    pub fn getPosVelsRadius(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>, f32)>
+    {
+        let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>,f32)>::new();
+        let state = self.states.lock().unwrap();
+        if !state.is_empty()
+        {
+            for elem in state.iter()  {
+                posvel.push((elem.id,elem.pos.clone(),elem.vel.clone(), 0.0f32));
+            }
+        }
+        drop(state);
+        let info = self.info.lock().unwrap();
+        for elem in posvel.iter_mut()  {
+            if let Some(params) = info.get(&elem.0)
+            {
+                elem.3 = params.collision_radius;
+            }
+        }
+        drop(info);
+        posvel
+    }
+}
+
+fn sendModelInfo(info_access: &Arc<Mutex<HashMap<usize, ObjectInfo>>>) 
+{
+    if let Ok(info) = info_access.lock()
+    {
+        let mut notifyTypesMsg = String::with_capacity(20* info.len());
+        notifyTypesMsg.push_str("o:");
+        for (id,obj_info) in info.iter()
+        {
+            notifyTypesMsg.push_str(id.to_string().as_str());
+            notifyTypesMsg.push(',');
+            notifyTypesMsg.push_str(&obj_info.model_name);
+            notifyTypesMsg.push(';');
+        }
+        Notification::sendMsg(&notifyTypesMsg);
     }
 }
 

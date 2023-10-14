@@ -1,6 +1,6 @@
 use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
 use nalgebra::{Vector3,Vector6, SVector, Vector4, geometry::Rotation3};
-use crate::{objects::Objects, logger, atmosphere::AtmosphereInfo};
+use crate::{objects::{Objects, ObjectInfo}, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
 use crate::printLog;
 
@@ -388,7 +388,11 @@ impl UAV
             Rotation3::from_euler_angles(ori.x, ori.y, ori.z)*cargo_param.hook;
         drop(state);
         let objects = self.objects_arc.lock().unwrap();
-        let id = objects.addObj(cargo_param.mass, cargo_param.CS, pos, vel);
+        let info = ObjectInfo{
+            model_name: cargo_param.model.clone(),
+            collision_radius: cargo_param.radius
+        };
+        let id = objects.addObj(cargo_param.mass, cargo_param.CS, pos, vel, info);
         drop(objects);
         (res, id)
     }
@@ -430,8 +434,12 @@ impl UAV
         let pos = state.getPos3() + 
             Rotation3::from_euler_angles(ori.x, ori.y, ori.z)*ammo_param.position;
         drop(state);
+        let info = ObjectInfo{
+            model_name: ammo_param.model.clone(),
+            collision_radius: ammo_param.radius
+        };
         let objects = self.objects_arc.lock().unwrap();
-        let id = objects.addObj(ammo_param.mass, ammo_param.CS, pos, vel);
+        let id = objects.addObj(ammo_param.mass, ammo_param.CS, pos, vel,info);
         drop(objects);
         (res, id)
     }

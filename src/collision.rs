@@ -1,5 +1,5 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time, collections::HashMap};
-use nalgebra::{Vector3,Vector4,geometry::Rotation3, Matrix3, DMatrix};
+use nalgebra::{Vector3,Vector4, Matrix3, DMatrix};
 use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj};
 use crate::printLog;
@@ -37,8 +37,6 @@ impl CollisionDetector
             ServerConfig::get_f32("collisionPlusEps"),
             ServerConfig::get_f32("collisionMinusEps"),
             grid,
-            ServerConfig::get_f32("sphereRadius"),
-            ServerConfig::get_f32("projectileRadius"),
             ServerConfig::get_f32("COR"),
             ServerConfig::get_f32("mi_s"),
             ServerConfig::get_f32("mi_d"),
@@ -59,19 +57,19 @@ impl CollisionDetector
                 drop(drones_lck);
 
                 let obj_lck = _objects.lock().unwrap();
-                let objs_pos_vels = obj_lck.getPosVels();
+                let objs_pos_vels_radius = obj_lck.getPosVelsRadius();
                 drop(obj_lck);
                 
                 //Colision between objects are negligible
                 Self::colisions_between_drones(&drones_pos_vel,map.minimalDist);
-                Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels,map.minimalDist);
+                Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels_radius,map.minimalDist);
                 
                 
                 //Drone collision with map
                 Self::impulse_collision_drone(&drones_pos_vel,&_drones,&mut meshes, &types,&map);
-                Self::impulse_collision_projectiles(&objs_pos_vels,&_objects,&map);
+                Self::impulse_collision_projectiles(&objs_pos_vels_radius,&_objects,&map);
                 //Second box
-                Self::boundary_box_obj(&objs_pos_vels, &_objects, box_min, box_max);
+                Self::boundary_box_obj(&objs_pos_vels_radius, &_objects, box_min, box_max);
                 
                 //TEST
                 //Self::ground_objs(&objs_pos_vels, &_objects);
@@ -105,7 +103,7 @@ impl CollisionDetector
     }
 
     fn colisions_drones_obj(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
-        objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>, minimal_dist: f32)
+        objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>, minimal_dist: f32)
     {
         for obj1 in drones_pos_vel.iter() {
             for obj2 in objs_pos_vels.iter() {
@@ -119,11 +117,11 @@ impl CollisionDetector
     }
 
     #[allow(dead_code)]
-    fn boundary_box_obj(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
+    fn boundary_box_obj(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>,
         objects: &Arc<Mutex<Objects>>, box_min: Vector3<f32>, box_max: Vector3<f32>)
     {
         let mut objToKill = Vec::new();
-        for (id,pos,_) in objs_pos_vels.iter() 
+        for (id,pos,_,_) in objs_pos_vels.iter() 
         {
             if box_min.inf(pos) != box_min || box_max.sup(pos) != box_max
             {
@@ -141,79 +139,15 @@ impl CollisionDetector
         }
     }
 
-
-    #[allow(dead_code)]
-    fn spring_dumper_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>, rotorPos: &Vec<Vector3<f32>>, map: &Map)
-    {
-        let k = 0.4f32;
-        let b = 0.2f32;
-        let mut forceToSend = Vec::<(usize,Vector3<f32>, Vector3<f32>)>::new();
-        for (id, pos, ori, vel, om) in objs_pos_vels.iter()
-        {
-            let worldPosVel = rotorPos.iter().map(|r| 
-                {
-                    (r, Rotation3::from_euler_angles(ori.x, ori.y, ori.z)* r + pos, vel + om.cross(r))
-                }
-            );
-            let mut forceSum = Vector3::<f32>::zeros();
-            let mut torqueSum = Vector3::<f32>::zeros();
-            for (r, pos,vel) in worldPosVel
-            {
-                if pos[2] + map.sphereRadius > 10.0
-                {
-                    let mut force = Vector3::<f32>::zeros();
-                    force[2] = -k*(pos[2] + map.sphereRadius) - b*vel[2];
-                    forceSum += force;
-                    torqueSum += r.cross(&force);
-                }
-            }
-            forceToSend.push((*id, forceSum,torqueSum));
-        }
-        if !forceToSend.is_empty()
-        {
-            let drones_lck = drones.lock().unwrap();
-            for (id,force,torque) in &forceToSend {
-                drones_lck.updateForce(id,force,torque);
-            }
-            drop(drones_lck);
-        }
-    }
-
-    #[allow(dead_code)]
-    fn ground_objs(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
-        objects: &Arc<Mutex<Objects>>)
-    {
-        let k = 0.4f32;
-        let b = 0.2f32;
-        let mut forceToSend = Vec::<(usize,Vector3<f32>)>::new();
-        for obj in objs_pos_vels.iter() {
-            if obj.1[2] > 0.0
-            {
-                let mut force = Vector3::<f32>::zeros();
-                force[2] = -k*obj.1[2] - b*obj.2[2];
-                forceToSend.push((obj.0,force.clone()));
-            }
-        }
-        if !forceToSend.is_empty()
-        {
-            let obj_lck = objects.lock().unwrap();
-            for elem in forceToSend {
-                obj_lck.setForce(elem.0,elem.1);
-            }
-            drop(obj_lck);
-        }
-    }
-
-    fn impulse_collision_projectiles(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>)>,
+    fn impulse_collision_projectiles(objs_pos_vels_radius: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>,
     objects: &Arc<Mutex<Objects>>, map: &Map)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>)>::new();
 
         //For every drone
-        for (id, pos, _) in objs_pos_vels.iter()
+        for (id, pos, _,radius) in objs_pos_vels_radius.iter()
         {
-            collisionsToSend.extend(map.checkWalls(*pos,map.projectileRadius).iter().map(|n| (*id,n.clone())));
+            collisionsToSend.extend(map.checkWalls(*pos,*radius).iter().map(|n| (*id,n.clone())));
         }
         if !collisionsToSend.is_empty()
         {
