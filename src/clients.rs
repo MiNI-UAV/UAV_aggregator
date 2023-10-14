@@ -213,7 +213,7 @@ impl Clients
                 "beep" => {  
                     *skipedHeartbeats = 0;
                 }
-                "shot" => { 
+                "shoot" => { 
                     let index = params.first().get_or_insert(&"0").parse().unwrap();
                     let (res,id) = drone.shootAmmo(index);
                     if id < 0
@@ -254,6 +254,7 @@ impl Clients
                     d.retain_mut(|d| d.id != drone_no);
                 }
                 _ => {
+                    rep = "error".to_string();
                     printLog!("Unknown command: {}", msg);
                 }
             }

@@ -71,7 +71,7 @@ impl Cargo
                         
                         if length > link.length
                         {
-                            force = (link.k*(length-link.length) - link.b*relative_vel)*dist;
+                            force = (link.k*(length-link.length) + link.b*relative_vel)*dist;
                             torque = offset.cross(&force);
                         }
                         forceToSend.push((drone.0, obj.0, force, torque));
