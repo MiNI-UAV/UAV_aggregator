@@ -14,8 +14,6 @@ pub struct Map
 
     pub collisionPlusEps: f32,
     pub collisionMinusEps: f32,
-    pub sphereRadius: f32,
-    pub projectileRadius: f32,
     pub COR: f32,
     pub mi_s: f32,
     pub mi_d: f32,
@@ -25,7 +23,7 @@ pub struct Map
 impl Map
 {
     pub fn new(path: &str, collisionPlusEps: f32, collisionMinusEps: f32, grid: Vector3<f32>,
-        sphereRadius: f32, projectileRadius: f32, COR: f32, mi_s: f32, mi_d: f32, minimalDist: f32) -> Self
+        COR: f32, mi_s: f32, mi_d: f32, minimalDist: f32) -> Self
     {
         let walls = Obj::from_file(path);
         let (min,max) = walls.boundingBox();
@@ -38,8 +36,6 @@ impl Map
 
         let mut map = Map{_walls: walls, _min: min, _max: max, _step: step,
             facesInChunk, collisionPlusEps, collisionMinusEps,
-            sphereRadius,
-            projectileRadius,
             COR,
             mi_s,
             mi_d,

@@ -1,13 +1,11 @@
 #map
-map: venice
+map: city
 map_offset: 30
 
 #collisions
 grid: 100, 100, 10
 collisionPlusEps: 0.1
 collisionMinusEps: -0.3
-sphereRadius: 0.1
-projectileRadius: 0.5
 COR: 0.5
 mi_s: 0.4
 mi_d: 0.3
@@ -32,3 +30,4 @@ first_port: 10000
 #other
 q_exit: false
 notifyTypeScaler: 10
+notifyObjTypeScaler: 20

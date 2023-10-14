@@ -1,5 +1,4 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, collections::HashSet, io::Write};
-use nalgebra::Vector3;
 use std::fs::{File,read_dir};
 use std::path::Path;
 use std::str;
@@ -135,9 +134,10 @@ impl Clients
                                     }
                                     let mut d_lck = d2.lock().unwrap();
                                     let mut cargo_lck = c2.lock().unwrap();
-                                    Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
+                                    let rep = Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
                                     drop(cargo_lck);
                                     drop(d_lck);
+                                    control_pair_socket.send(&rep, 0).unwrap();
                                 }
                             })
                         ));
@@ -195,25 +195,57 @@ impl Clients
         serde_json::to_string(&info).unwrap()
     }
 
-    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize)
+    fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize) -> String
     {
+        let mut splited = msg.split(";");
+        let action = splited.next().unwrap();
+        let mut params = Vec::<&str>::new();
+        if let Some(params_string) =  splited.next()
+        {
+            params_string.split(",").for_each(|s| params.push(s));
+        }
         let mut d = drones.drones.lock().unwrap();
+        let mut rep = String::with_capacity(30);
+        rep.push_str("ok");
         if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
         {
-            match msg {
+            match action {
                 "beep" => {  
                     *skipedHeartbeats = 0;
                 }
-                "shot" => {  
-                    drone.dropOrShot(None, None, None, None);
+                "shoot" => { 
+                    let index = params.first().get_or_insert(&"0").parse().unwrap();
+                    let (res,id) = drone.shootAmmo(index);
+                    if id < 0
+                    {
+                        rep = "error".to_string();   
+                    }
+                    rep.push(';');
+                    rep.push_str(&res.to_string());
+                    rep.push(',');
+                    rep.push_str(&id.to_string());
                 }
                 "drop" => {
-                    // 20cm ball
-                    let id = drone.dropOrShot(Some(0.2), Some(0.0), Some(0.015), None);
-                    if id >= 0
+                    let index = params.first().get_or_insert(&"0").parse().unwrap();
+                    let (res,id) = drone.releaseCargo(index);
+                    if id < 0
                     {
-                        cargo.addLink(drone_no, id as usize, 2.0, 5.0, Vector3::zeros());
+                        rep = "error".to_string();   
                     }
+                    else if res >= 0
+                    {
+                        let params = drone.config.cargo.get(index).unwrap();
+                        cargo.addLink(drone_no,
+                            id as usize,
+                            params.length,
+                            params.k,
+                            params.b,
+                            params.hook);
+                    }
+                    rep.push(';');
+                    rep.push_str(&res.to_string());
+                    rep.push(',');
+                    rep.push_str(&id.to_string());
                 }
                 "release" => {
                     cargo.removeLink(drone_no);
@@ -222,11 +254,13 @@ impl Clients
                     d.retain_mut(|d| d.id != drone_no);
                 }
                 _ => {
+                    rep = "error".to_string();
                     printLog!("Unknown command: {}", msg);
                 }
             }
         }
         drop(d);
+        rep
     }
 }
 

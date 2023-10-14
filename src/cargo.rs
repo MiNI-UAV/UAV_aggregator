@@ -10,6 +10,7 @@ struct Link
     timeout: usize,
     length: f32,
     k: f32,
+    b: f32,
     hook_offset: Vector3<f32>
 }
 
@@ -63,12 +64,14 @@ impl Cargo
                         let mut torque = Vector3::<f32>::zeros();
                         
                         let offset = Rotation3::from_euler_angles(drone.2.x, drone.2.y, drone.2.z)*link.hook_offset;
-                        let dist = obj.1 - (drone.1+offset);
+                        let mut dist = obj.1 - (drone.1+offset);
                         let length = dist.norm();
+                        dist = dist.normalize();
+                        let relative_vel = obj.2.dot(&dist) - drone.3.dot(&dist);
+                        
                         if length > link.length
                         {
-
-                            force = link.k*(length-link.length)*dist.normalize();
+                            force = (link.k*(length-link.length) + link.b*relative_vel)*dist;
                             torque = offset.cross(&force);
                         }
                         forceToSend.push((drone.0, obj.0, force, torque));
@@ -113,10 +116,10 @@ impl Cargo
         Cargo {running, collision_checker: Some(collision_checker), links}
     }
 
-    pub fn addLink(&self,drone_id: usize, obj_id: usize, length: f32, k: f32, hook_offset: Vector3<f32>)
+    pub fn addLink(&self,drone_id: usize, obj_id: usize, length: f32, k: f32, b: f32, hook_offset: Vector3<f32>)
     {
         let mut links_lck = self.links.lock().unwrap();
-        links_lck.insert((drone_id,obj_id), Link { timeout: 0, length, k, hook_offset});
+        links_lck.insert((drone_id,obj_id), Link { timeout: 0, length, k, b, hook_offset});
         notifyAboutLinks(&links_lck);
         drop(links_lck);
     }
