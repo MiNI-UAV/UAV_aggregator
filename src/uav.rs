@@ -412,7 +412,7 @@ impl UAV
         let rep = self._sendControlMsg(&command);
         let mut res = 0isize;
         let mut vel = Vector3::zeros();
-        for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0.0,0.0,0.0").split(",").enumerate()
+        for (i,elem) in rep.split(';').skip(1).next().get_or_insert("0,0.0,0.0,0.0").split(",").enumerate()
         {
             if i == 0
             {

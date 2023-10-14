@@ -134,9 +134,10 @@ impl Clients
                                     }
                                     let mut d_lck = d2.lock().unwrap();
                                     let mut cargo_lck = c2.lock().unwrap();
-                                    Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
+                                    let rep = Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
                                     drop(cargo_lck);
                                     drop(d_lck);
+                                    control_pair_socket.send(&rep, 0).unwrap();
                                 }
                             })
                         ));
@@ -196,18 +197,24 @@ impl Clients
 
     fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize) -> String
     {
+        let mut splited = msg.split(";");
+        let action = splited.next().unwrap();
+        let mut params = Vec::<&str>::new();
+        if let Some(params_string) =  splited.next()
+        {
+            params_string.split(",").for_each(|s| params.push(s));
+        }
         let mut d = drones.drones.lock().unwrap();
         let mut rep = String::with_capacity(30);
         rep.push_str("ok");
-        //TODO: index in reciving param
-        let index = 0;
         if let Some(drone) = d.iter().find(|drone| drone.id == drone_no)
         {
-            match msg {
+            match action {
                 "beep" => {  
                     *skipedHeartbeats = 0;
                 }
-                "shot" => {  
+                "shot" => { 
+                    let index = params.first().get_or_insert(&"0").parse().unwrap();
                     let (res,id) = drone.shootAmmo(index);
                     if id < 0
                     {
@@ -219,6 +226,7 @@ impl Clients
                     rep.push_str(&id.to_string());
                 }
                 "drop" => {
+                    let index = params.first().get_or_insert(&"0").parse().unwrap();
                     let (res,id) = drone.releaseCargo(index);
                     if id < 0
                     {
