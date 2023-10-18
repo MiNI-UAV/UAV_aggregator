@@ -1,4 +1,4 @@
-use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, time, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
+use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, sync::{Mutex, Arc}, io::{BufRead, BufReader}, time};
 use nalgebra::{Vector3,Vector6, SVector, Vector4, geometry::Rotation3};
 use crate::{objects::{Objects, ObjectInfo}, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
@@ -16,7 +16,7 @@ pub struct DroneState
 
 impl DroneState {
     pub fn new() -> Self {
-        DroneState {time: -1.0, pos: SVector::repeat(-1.0f32), vel: Vector6::repeat(-1.0f32), om: Vec::new()}
+        DroneState {time: 0.0, pos: SVector::repeat(0.0f32), vel: Vector6::repeat(0.0f32), om: Vec::new()}
     }
 
     pub fn getPos3(&self) -> Vector3<f32>
@@ -243,48 +243,60 @@ impl UAV
         uav.state_listener = Option::Some(thread::spawn(move || {
             let mut msg = zmq::Message::new();
             loop {
-                let mut t = 0.0f32;
-                let mut pos = SVector::<f32,7>::zeros();
-                let mut vel = Vector6::zeros();
-                let mut om: Vec<f32> = Vec::new();
+                let mut t = None;
+                let mut pos = None;
+                let mut vel = None;
+                let mut om: Option<Vec<f32>> = None;
 
                 if let Ok(_) = t_socket.recv(&mut msg, 0)
                 {
                     let s = msg.as_str().unwrap();
                     //printLog!("{}", s);
-                    t = s[2..].parse::<f32>().expect("parse t error");
+                    t = Some(s[2..].parse::<f32>().expect("parse t error"));
                 }
 
                 if let Ok(_) = pos_socket.recv(&mut msg, 0)
                 {
                     let s = msg.as_str().unwrap();
                     //printLog!("{}", s);
-                    pos = parseToArray7(s,4);
+                    pos = Some(parseToArray7(s,4));
                 }
 
                 if let Ok(_) = vel_socket.recv(&mut msg, 0)
                 {
                 let s = msg.as_str().unwrap();
                     //printLog!("{}", s);
-                    vel = parseToArray(s,3);
+                    vel = Some(parseToArray(s,3));
                 }
 
                 if let Ok(_) = om_socket.recv(&mut msg, 0)
                 {
                     let s = msg.as_str().unwrap();
                     let trimmed_input = &s[3..];
-                    om = trimmed_input
+                    om = Some(trimmed_input
                         .split(',')
                         .map(|item| item.trim().parse::<f32>())
                         .filter_map(Result::ok)
-                        .collect();
+                        .collect());
                 }
                 
                 let mut state = state.lock().unwrap();
-                state.time = t;
-                state.pos = pos;
-                state.vel = vel;
-                state.om = om;
+                if let Some(t_val) = t
+                {
+                    state.time = t_val;
+                }
+                if let Some(pos_val) = pos
+                {
+                    state.pos = pos_val;
+                }
+                if let Some(vel_val) = vel
+                {
+                    state.vel = vel_val;
+                }
+                if let Some(om_val) = om
+                {
+                    state.om = om_val;
+                }
                 drop(state);
                 thread::sleep(time::Duration::from_millis(10));
             }
