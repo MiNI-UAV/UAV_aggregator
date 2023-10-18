@@ -1,4 +1,4 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time, collections::HashMap};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time::{self, Instant}, collections::HashMap};
 use nalgebra::Vector3;
 use crate::{printLog, config::ServerConfig, notification::Notification};
 
@@ -86,6 +86,8 @@ impl Objects
         let time_access = time.clone();
         let states_access = states.clone();
         let info_access = info.clone();
+        let mut last_notify = Instant::now();
+        let notify_period = ServerConfig::get_usize("notify_period").try_into().unwrap();
         let capture: JoinHandle<()> = thread::spawn(move ||
         {
             let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
@@ -93,8 +95,6 @@ impl Objects
             capture_socket.set_rcvtimeo(1000).unwrap();
             capture_socket.set_conflate(true).unwrap();
             capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
-            let notify_type_scaler: usize = ServerConfig::get_usize("notifyObjTypeScaler");
-            let mut counter = 0;
             while r.load(Ordering::SeqCst) {
                 let mut obj_states_msg =  zmq::Message::new();
                 if let Err(_) = capture_socket.recv(&mut obj_states_msg, 0)
@@ -103,11 +103,10 @@ impl Objects
                 }
                 let obj_info = obj_states_msg.as_str().unwrap().to_string();
                 Self::parseInfo(&time_access,&states_access,obj_info);
-                counter = counter + 1;
-                if counter >= notify_type_scaler
+                if last_notify.elapsed().as_millis() > notify_period
                 {
+                    last_notify = Instant::now();
                     sendModelInfo(&info_access);
-                    counter = 0;
                 }
             }
         });

@@ -1,4 +1,4 @@
-use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time};
+use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time::{self, Instant}};
 use nalgebra::{Vector3,Vector4, DVector};
 use crate::{uav::{UAV,DroneState}, notification::Notification};
 use crate::objects::Objects;
@@ -22,9 +22,8 @@ impl Drones
     pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
         let port: usize = ServerConfig::get_usize("drones_port"); 
         let client_limit: usize = ServerConfig::get_usize("client_limit");
-        let notify_type_scaler: usize = ServerConfig::get_usize("notifyTypeScaler");
-        let mut counter: usize = 0;
-
+        let mut last_notify = Instant::now();
+        let notify_period = ServerConfig::get_usize("notify_period").try_into().unwrap();
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let drones = Arc::new(Mutex::new(Vec::<UAV>::new()));
@@ -41,11 +40,10 @@ impl Drones
                 {
                     let mut timeToNotify = false;
                     let mut notifyTypesMsg = String::new();
-                    counter += 1;
-                    if counter == notify_type_scaler
+                    if last_notify.elapsed().as_millis() > notify_period
                     {
+                        last_notify = Instant::now();
                         timeToNotify = true;
-                        counter = 0;
                         notifyTypesMsg.reserve(drones.len()*50);
                         notifyTypesMsg.push_str("t:");
                     }

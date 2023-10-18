@@ -10,7 +10,7 @@ COR: 0.5
 mi_s: 0.4
 mi_d: 0.3
 minimalDist: 1.0
-timeout_limit: 10
+timeout_limit: 5
 notify_period: 200
 
 #atmosphere
@@ -30,5 +30,3 @@ first_port: 10000
 
 #other
 q_exit: false
-notifyTypeScaler: 10
-notifyObjTypeScaler: 20
