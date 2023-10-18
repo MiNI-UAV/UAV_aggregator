@@ -157,3 +157,33 @@ impl Drop for Atmosphere{
         printLog!("Wind instance dropped");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static EPS: f32 = 1e-3f32;
+
+    #[test]
+    fn calc_temp_test() {
+        assert!((calcTemperature(0.0,0.0) - 0.0).abs() < EPS);
+        assert!((calcTemperature(0.0,50.0) - 50.0).abs() < EPS);
+        assert!((calcTemperature(0.0,-50.0) + 50.0).abs() < EPS);
+        assert!((calcTemperature(1000.0,0.0) - 6.5).abs() < EPS);
+        assert!((calcTemperature(2000.0,0.0) - 13.0).abs() < EPS);
+    }
+
+    #[test]
+    fn calc_pressure_test() {
+        assert!((calcPressure(0.0,101325.0,288.15) - 101325.0).abs() < EPS);
+        assert!((calcPressure(0.0,101325.0,273.15) - 101325.0).abs() < EPS);
+        assert!((calcPressure(1000.0,101325.0,273.15) - 89874.57).abs() < EPS);
+    }
+
+    #[test]
+    fn calc_density_test() {
+        assert!((calcDensity(273.15,0.0) - 0.0).abs() < EPS);
+        assert!((calcDensity(273.15 + 20.0,101325.0) - 1.204).abs() < EPS);
+        assert!((calcDensity(273.15 + 15.0,101325.0) - 1.225).abs() < EPS);
+    }
+}

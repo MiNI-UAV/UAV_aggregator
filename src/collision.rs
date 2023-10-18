@@ -227,3 +227,22 @@ impl Drop for CollisionDetector{
         printLog!("Collision detector instance dropped");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static EPS: f32 = 1e-3f32;
+
+    #[test]
+    fn create_rot_matrix_from_quaterion() {
+        // Example from MATLAB docs
+        // https://www.mathworks.com/help/nav/ref/quaternion.rotmat.html
+        let q = Vector4::new(0.8924, 0.23912,0.36964,-0.099046);
+        let rot = CollisionDetector::quaterionToRot3(&q);
+        //assert!((rot.m12 - 0.0).abs() < EPS);
+        assert!((rot.m23 + 0.5).abs() < EPS);
+        assert!((rot.m32 - 0.3536).abs() < EPS);
+        assert!((rot.m21 - 0.0).abs() < EPS);
+    }
+}
