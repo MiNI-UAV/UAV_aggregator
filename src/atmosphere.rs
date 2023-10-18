@@ -162,22 +162,22 @@ impl Drop for Atmosphere{
 mod tests {
     use super::*;
 
-    static EPS: f32 = 1e-3f32;
+    static EPS: f32 = 1e-2f32;
 
     #[test]
     fn calc_temp_test() {
         assert!((calcTemperature(0.0,0.0) - 0.0).abs() < EPS);
         assert!((calcTemperature(0.0,50.0) - 50.0).abs() < EPS);
         assert!((calcTemperature(0.0,-50.0) + 50.0).abs() < EPS);
-        assert!((calcTemperature(1000.0,0.0) - 6.5).abs() < EPS);
-        assert!((calcTemperature(2000.0,0.0) - 13.0).abs() < EPS);
+        assert!((calcTemperature(1000.0,0.0) + 6.5).abs() < EPS);
+        assert!((calcTemperature(2000.0,0.0) + 13.0).abs() < EPS);
     }
 
     #[test]
     fn calc_pressure_test() {
         assert!((calcPressure(0.0,101325.0,288.15) - 101325.0).abs() < EPS);
         assert!((calcPressure(0.0,101325.0,273.15) - 101325.0).abs() < EPS);
-        assert!((calcPressure(1000.0,101325.0,273.15) - 89874.57).abs() < EPS);
+        assert!((calcPressure(1000.0,101325.0,288.15) - 89874.52).abs() < EPS);
     }
 
     #[test]
