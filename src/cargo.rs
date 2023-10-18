@@ -30,60 +30,65 @@ impl Cargo
         let r = running.clone();
         let links = Arc::new(Mutex::new(HashMap::<(usize,usize),Link>::new()));
         let l = links.clone();
+        let mut last_notify = Instant::now();
+        let notify_period = ServerConfig::get_usize("notify_period").try_into().unwrap();
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
-            let mut counter: usize = 0;
             while r.load(Ordering::SeqCst) {
-                let links_lck = l.lock().unwrap();
-                let skip = links_lck.is_empty();
-                drop(links_lck);
-                if skip
-                {
-                    thread::sleep(time::Duration::from_millis(2));
-                }
-
                 let mut forceToSend = Vec::new();
 
-                let start = Instant::now();
-                let drones_lck = _drones.lock().unwrap();
-                let drones_pos_vel = drones_lck.getPosOriVels();
-                drop(drones_lck);
-
-                let obj_lck = _objects.lock().unwrap();
-                let objs_pos_vels = obj_lck.getPosVels();
-                drop(obj_lck);
-
                 let mut links_lck = l.lock().unwrap();
-                for ((drone_id, obj_id),link) in links_lck.iter_mut()
+                
+                if !links_lck.is_empty()
                 {
-                    if let (Some(drone), Some(obj)) 
-                        =  (drones_pos_vel.iter().find(|d|d.0 == *drone_id),
-                            objs_pos_vels.iter().find(|o|o.0 == *obj_id))
+                    let drones_lck = _drones.lock().unwrap();
+                    let drones_pos_vel = drones_lck.getPosOriVels();
+                    drop(drones_lck);
+
+                    let obj_lck = _objects.lock().unwrap();
+                    let objs_pos_vels = obj_lck.getPosVels();
+                    drop(obj_lck);
+
+                    for ((drone_id, obj_id),link) in links_lck.iter_mut()
                     {
-                        let mut force = Vector3::<f32>::zeros();
-                        let mut torque = Vector3::<f32>::zeros();
-                        
-                        let offset = Rotation3::from_euler_angles(drone.2.x, drone.2.y, drone.2.z)*link.hook_offset;
-                        let mut dist = obj.1 - (drone.1+offset);
-                        let length = dist.norm();
-                        dist = dist.normalize();
-                        let relative_vel = obj.2.dot(&dist) - drone.3.dot(&dist);
-                        
-                        if length > link.length
+                        if let (Some(drone), Some(obj)) 
+                            =  (drones_pos_vel.iter().find(|d|d.0 == *drone_id),
+                                objs_pos_vels.iter().find(|o|o.0 == *obj_id))
                         {
-                            force = (link.k*(length-link.length) + link.b*relative_vel)*dist;
-                            torque = offset.cross(&force);
+                            let mut force = Vector3::<f32>::zeros();
+                            let mut torque = Vector3::<f32>::zeros();
+                            
+                            let offset = Rotation3::from_euler_angles(drone.2.x, drone.2.y, drone.2.z)*link.hook_offset;
+                            let mut dist = obj.1 - (drone.1+offset);
+                            let length = dist.norm();
+                            dist = dist.normalize();
+                            let relative_vel = obj.2.dot(&dist) - drone.3.dot(&dist);
+                            
+                            if length > link.length
+                            {
+                                force = (link.k*(length-link.length) + link.b*relative_vel)*dist;
+                                torque = offset.cross(&force);
+                            }
+                            forceToSend.push((drone.0, obj.0, force, torque));
                         }
-                        forceToSend.push((drone.0, obj.0, force, torque));
-                    }
-                    else {
-                        link.timeout += 1;
+                        else {
+                            link.timeout += 1;
+                        }
                     }
                 }
+                else
+                {
+                    links_lck.iter_mut().for_each(|(_, link)|
+                    {
+                        link.timeout += 1;
+                    });    
+                }
+
                 links_lck.retain(|_,v| v.timeout < timeout_limit);
 
-                if counter % 500 == 0
+                if last_notify.elapsed().as_millis() > notify_period
                 {
+                    last_notify = Instant::now();
                     notifyAboutLinks(&links_lck);
                 }
 
@@ -103,14 +108,7 @@ impl Cargo
                     }
                     drop(drone_lck);
                 }
-
-                
-                        
-                #[allow(unused_variables)]
-                let elapsed = start.elapsed();
-                //printLog!("Cargo calc time: {} ms", elapsed.as_millis());
-                counter = (counter+1)%10000;
-                thread::sleep(time::Duration::from_millis(5));
+                thread::sleep(time::Duration::from_millis(2));
             }
         });
         Cargo {running, collision_checker: Some(collision_checker), links}

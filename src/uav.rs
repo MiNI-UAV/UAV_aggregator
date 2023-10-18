@@ -1,4 +1,4 @@
-use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, sync::{Mutex, Arc}, io::{BufRead, BufReader}, time};
+use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, sync::{Mutex, Arc}, io::{BufRead, BufReader}};
 use nalgebra::{Vector3,Vector6, SVector, Vector4, geometry::Rotation3};
 use crate::{objects::{Objects, ObjectInfo}, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
@@ -298,7 +298,7 @@ impl UAV
                     state.om = om_val;
                 }
                 drop(state);
-                thread::sleep(time::Duration::from_millis(10));
+                //thread::sleep(time::Duration::from_millis(10));
             }
         }));
     }

@@ -11,6 +11,7 @@ mi_s: 0.4
 mi_d: 0.3
 minimalDist: 1.0
 timeout_limit: 10
+notify_period: 200
 
 #atmosphere
 temperature: 288.15
