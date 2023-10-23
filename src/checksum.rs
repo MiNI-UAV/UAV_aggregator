@@ -2,15 +2,20 @@ use merkle_hash::{Algorithm, MerkleTree};
 use std::fs::{read_to_string,write};
 use crate::printLog;
 
-
+/// Path to assets folder
 const ASSETS_PATH: &str = "./assets";
+/// Path to text file to write calculated checksum
 const ASSETS_CHECKSUM_PATH: &str = "./configs/assets_checksum";
 
+/// Returns checksum. Read checksum from file.
 pub fn getChecksum() -> String
 {
     read_to_string(ASSETS_CHECKSUM_PATH).unwrap()
 }
 
+/// Calculates and update checksum for assets directory tree.
+/// Include directory structure and files content using Merkle tree.
+/// Checksum in file is updated only if it changed.
 pub fn calcChecksum()
 {
     let tree = MerkleTree::builder(ASSETS_PATH)

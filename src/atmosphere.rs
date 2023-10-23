@@ -3,27 +3,37 @@ use nalgebra::{Vector3, Matrix3};
 use crate::{drones::Drones, objects::Objects, config::ServerConfig};
 use crate::printLog;
 
+/// Air thermodynamic gas constant for dry air
 const R_AIR_CONSTANT: f32 = 287.052874;
+/// Temperature drop due to altitude rise
 const TEMP_ALTITUDE_RATE: f32 = 6.5e-3;
+/// Gravity constant on Earth
 const GRAVITY_ACCELERATION: f32 = 9.8067;
 
+/// Atmosphere simulation. Notify UAVs and Objects about atmosphere state.
 pub struct Atmosphere
 {
     running: Arc<AtomicBool>,
     atmosphere_reqester: Option<thread::JoinHandle<()>>
 }
 
+/// Atmosphere state DTO
 #[derive(Debug)]
 pub struct AtmosphereInfo
 {
+    /// wind vector in m/s
     pub wind: Vector3<f32>,
+    /// air temperature in K
     pub air_temperature: f32,
+    /// air pressure Pa
     pub air_pressure: f32,
+    /// air_density kg/m3
     pub air_density: f32,
 }
 
 impl Atmosphere
 {
+    /// Construct atmosphere instance. Require arcs to drones and objects to inform them.
     pub fn new(drones: Arc<Mutex<Drones>>,objects: Arc<Mutex<Objects>>) -> Self
     {   
         let running = Arc::new(AtomicBool::new(true));
@@ -89,12 +99,13 @@ impl Atmosphere
         Atmosphere {running: running, atmosphere_reqester: Some(atmosphere_reqester) }
     }
 
+    /// Returns wind vector for specified position
     fn calcWind(pos: &Vector3<f32>, windMatrix: &Matrix3<f32>, windBias: &Vector3<f32>) -> Vector3<f32>
     {
         windBias + windMatrix * pos
     }
 
-
+    /// Parses wind matrix and wind bias from string from configuration file.
     fn parseWindFunction(wind_matrix: &str, wind_bias: &str) -> (Matrix3<f32>, Vector3<f32>) {
         
         let wind_matrix = wind_matrix.split(';')
@@ -129,6 +140,8 @@ impl Atmosphere
     }
 }
 
+
+/// Calc air information for specified position
 fn calcAirInfo(pos: &Vector3<f32>, temp0: f32, pressure0: f32) -> (f32, f32, f32) {
     let h = -pos[2];
     let temp = calcTemperature(h,temp0);
@@ -137,18 +150,22 @@ fn calcAirInfo(pos: &Vector3<f32>, temp0: f32, pressure0: f32) -> (f32, f32, f32
     return (temp,pressure,density);
 }
 
+/// Calculates air density in kg/m3 for specified temperature and pressure
 fn calcDensity(temp: f32, pressure: f32) -> f32 {
     pressure/(temp*R_AIR_CONSTANT)
 }
 
+/// Calculates air pressure in Pa for specified altitude
 fn calcPressure(h: f32, pressure0: f32, temp0: f32) -> f32 {
     pressure0 * (1.0 - TEMP_ALTITUDE_RATE * (h/temp0)).powf(GRAVITY_ACCELERATION/(R_AIR_CONSTANT*TEMP_ALTITUDE_RATE))
 }
 
+/// Calculates air temperature in K for specified altitude
 fn calcTemperature(h: f32, temp0: f32) -> f32 {
     temp0 - h * TEMP_ALTITUDE_RATE
 }
 
+/// Deconstructor
 impl Drop for Atmosphere{
     fn drop(&mut self) {
         printLog!("Dropping wind instance");

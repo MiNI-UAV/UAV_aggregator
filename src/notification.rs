@@ -4,16 +4,20 @@ use zmq::Socket;
 use crate::printLog;
 
 
-
+/// static variable to check if Notification was initialized
 static READY: AtomicBool = AtomicBool::new(false);
+/// static notify socket used by Notification methods
 static NOTIFY_SOCKET: Mutex<Option<Socket>> = Mutex::new(None);
 
+/// Notify subscribers about simulation less importants events and statuses.
+/// Contains static method to send message and not require class instance to use.
 pub struct Notification
 {
 }
 
 impl Notification
 {
+    /// Initialize Notification class
     pub fn init(_ctx: zmq::Context, port: &usize)
     {
         let pub_socket = _ctx.socket(zmq::PUB).expect("PUB socket error");
@@ -24,6 +28,7 @@ impl Notification
         READY.store(true, atomic::Ordering::Relaxed)
     }
 
+    /// Send notification. Instance is not requiered.
     pub fn sendMsg(msg: &str)
     {
         if !READY.load(atomic::Ordering::Relaxed)

@@ -5,7 +5,7 @@ use crate::objects::Objects;
 use crate::config::ServerConfig;
 use crate::printLog;
 
-
+/// Control all UAVs in air. Communicate with simulation processes and visualizations
 pub struct Drones
 {
     ctx: zmq::Context,
@@ -19,6 +19,7 @@ pub struct Drones
 
 impl Drones
 {
+    /// Constructor. Start listener and publisher threads
     pub fn new(_ctx: zmq::Context,objects: Arc<Mutex<Objects>>) -> Self {
         let port: usize = ServerConfig::get_usize("drones_port"); 
         let client_limit: usize = ServerConfig::get_usize("client_limit");
@@ -79,6 +80,8 @@ impl Drones
              _state_publisher: Some(publisher), nextID: 1, slots }
     }
 
+
+    /// Returns first free slot, if available 
     fn getSlot(&mut self, id: usize) -> Option<usize>
     {
         for (i, slot) in self.slots.iter_mut().enumerate()
@@ -91,6 +94,8 @@ impl Drones
         }
         None
     }
+
+    /// Free specified slot - remove process in slot
     fn freeSlot(&mut self, id: usize)
     {
         
@@ -104,6 +109,7 @@ impl Drones
         }
     }
 
+    /// Sends terminate command to proxies on specified slot
     fn sendTerminate(ctx: zmq::Context, slot_no: usize)
     {
         let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
@@ -112,6 +118,7 @@ impl Drones
         drop(stopSocket);
     }
 
+    /// Starts new UAV and all requiered process & threads
     pub fn startUAV(&mut self, name: &str, config_path: &str) -> (usize,usize,String)
     {
         let slot = self.getSlot(self.nextID);
@@ -129,6 +136,7 @@ impl Drones
         (id,slot,format!("ipc:///tmp/{}/steer", name))
     }
 
+    /// Remove UAV specified by id
     pub fn removeUAV(&mut self, id: usize)
     {
         self.freeSlot(id);
@@ -137,6 +145,7 @@ impl Drones
         drop(drone);
     }
 
+    /// Remove all UAVs
     pub fn removeAllUAV(&mut self)
     {
         let mut drone = self.drones.lock().unwrap();
@@ -145,6 +154,7 @@ impl Drones
         drop(drone);
     }
 
+    /// Serializes all active UAV's states to string
     pub fn printState(&self)
     {
         for (i, item) in self.drones.lock().unwrap().iter().enumerate() {
@@ -153,6 +163,7 @@ impl Drones
         }
     }
 
+    /// Get position of active UAVs
     pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::new();
@@ -168,6 +179,7 @@ impl Drones
         pos
     }
 
+    /// Get position & orientation & velocities of active UAVs. Orientation is given by quaterion
     pub fn getPosOriVels(&self) -> Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>
     {
         let mut pos = Vec::new();
@@ -184,6 +196,7 @@ impl Drones
         pos
     }
 
+    // Get position & orientation & velocities of active UAVs. Orientation is given by Euler angles
     pub fn getPosOriRPYVels(&self) -> Vec<(usize,Vector3<f32>,Vector3<f32>,Vector3<f32>,Vector3<f32>)>
     {
         let mut pos = Vec::new();
@@ -200,6 +213,7 @@ impl Drones
         pos
     }
 
+    /// Get types of active UAVs
     pub fn getTypes(&self) -> Vec<String>
     {
         let mut types = Vec::new();
@@ -215,6 +229,7 @@ impl Drones
         types
     }
 
+    /// Update outer force for UAV specified by id
     pub fn updateForce(&self, id: &usize, force: &Vector3<f32>, torque: &Vector3<f32>)
     {
         let drone_lck = self.drones.lock().unwrap();
@@ -225,6 +240,7 @@ impl Drones
         drop(drone_lck);
     }
 
+    /// Sends information about collsion with surface to UAV specified by id
     pub fn sendSurfaceCollison(&self, id: &usize, COR: f32, mi_s: f32, mi_d: f32, collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
     {
         let drone_lck = self.drones.lock().unwrap();
@@ -236,6 +252,7 @@ impl Drones
     }
 }
 
+/// Deconstructor
 impl Drop for Drones{
     fn drop(&mut self) {
         printLog!("Dropping drones instance");

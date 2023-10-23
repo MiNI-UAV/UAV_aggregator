@@ -3,7 +3,7 @@ use std::collections::{HashMap,HashSet};
 use crate::obj::{Obj,Face};
 use crate::printLog;
 
-
+/// Simulation map
 pub struct Map
 {
     _walls: Obj,
@@ -22,6 +22,7 @@ pub struct Map
 
 impl Map
 {
+    /// Constructor
     pub fn new(path: &str, collisionPlusEps: f32, collisionMinusEps: f32, grid: Vector3<f32>,
         COR: f32, mi_s: f32, mi_d: f32, minimalDist: f32) -> Self
     {
@@ -45,6 +46,9 @@ impl Map
         map
     }
 
+    /// Checks if in specified point there is collision with map walls. 
+    /// Returns colection of normal vectors of face that point colide with.
+    /// If there is no collisions, return colection length is equal 0.
     pub fn checkWalls(&self, point: Vector3<f32>, radius: f32) -> Vec<Vector3<f32>>
     {
         let mut normalsInColisionPoint = Vec::new();
@@ -65,6 +69,9 @@ impl Map
         normalsInColisionPoint
     }
 
+    /// Checks if in specified point there is collision with map walls. 
+    /// Returns normal vector of wall that is the closest to point
+    /// If there is no collisions, return None
     pub fn checkWallsBest(&self, point: Vector3<f32>) -> Option<(f32,Vector3<f32>)>
     {
         let mut bestNormal = Vector3::<f32>::zeros();
@@ -93,6 +100,7 @@ impl Map
         None
     }
 
+    /// Calculates chunk that for specified point
     fn calcChunk(&self, point: Vector3<f32>) -> Vector3<usize>
     {
         let pos =  (point -  self._min).component_div(&self._step);
@@ -104,6 +112,7 @@ impl Map
         chunk
     }
 
+    /// Splits faces into chunks
     fn insertFace(&mut self)
     {
         for face in &self._walls.faces
@@ -138,13 +147,9 @@ impl Map
                 }
             }
         }
-
-        // for elem in &self.facesInChunk
-        // {
-        //     printLog!("Chunk: {} - faces: {}", elem.0, elem.1.len());
-        // }
     }
 
+    /// Get minimal and maximal coordinate of cubiod that contains all map's vertices
     pub fn getMinMax(&self) -> (Vector3<f32>,Vector3<f32>)
     {
         (self._min,self._max)

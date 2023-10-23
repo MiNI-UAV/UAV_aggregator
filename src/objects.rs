@@ -5,6 +5,7 @@ use crate::{printLog, config::ServerConfig, notification::Notification};
 
 
 #[derive(Debug)]
+/// State of single Object. Contains parsed information from object physic simualtion
 pub struct ObjectState
 {
     pub id: usize,
@@ -13,6 +14,7 @@ pub struct ObjectState
 }
 
 #[derive(Debug)]
+/// Extra information about object from drone configuration file
 pub struct ObjectInfo
 {
     pub model_name: String,
@@ -20,10 +22,12 @@ pub struct ObjectInfo
 }
 
 impl ObjectState {
+    /// Constructor
     pub fn new() -> Self {
         ObjectState {id: 0, pos: Vector3::repeat(-1.0f32), vel: Vector3::repeat(-1.0f32)}
     }
 
+    ///Parses Object state form string
     pub fn fromInfo(info: &str) -> Self {
         let mut id: usize = 0;
         let mut pos: Vector3<f32> = Vector3::repeat(-1.0f32);
@@ -42,6 +46,7 @@ impl ObjectState {
     }
 }
 
+/// All objects in simulation
 pub struct Objects
 {
     _ctx: zmq::Context,
@@ -58,6 +63,7 @@ pub struct Objects
 
 impl Objects
 {
+    /// Constructor
     pub fn new(_ctx: zmq::Context, port: usize) -> Self {
         let drop_physic = Command::new("../UAV_drop_physic/build/drop")
         .stdout(Stdio::null())
@@ -116,6 +122,7 @@ impl Objects
              _drop_physic: drop_physic, _state_proxy: Some(proxy), _state_cupturer: Some(capture)}
     }
 
+    /// Parses objects state from string
     fn parseInfo(time: &Arc<Mutex<f32>>, states: &Arc<Mutex<Vec<ObjectState>>>, info: String)
     {
         let mut newStates = Vec::new();
@@ -140,6 +147,7 @@ impl Objects
         drop(state_lck);
     }
 
+    /// Sends control message to object's simulation
     fn _sendControlMsg(&self, msg: &str) -> String
     {
         self.control_socket.send(&msg, 0).unwrap();
@@ -150,6 +158,7 @@ impl Objects
         rep.to_string()
     }
 
+    /// Add new object to simulation
     pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>, obj_info: ObjectInfo) -> isize
     {
         let mut command = String::with_capacity(60);
@@ -181,6 +190,7 @@ impl Objects
         id
     }
 
+    /// Remove object from simulation
     pub fn removeObj(&self, id: usize)
     {
         self._sendControlMsg(&format!("r:{}",id.to_string()));
@@ -190,6 +200,7 @@ impl Objects
         }
     }
 
+    /// Peridically updates winds info for objects
     pub fn updateWind(&self, wind: Vec<(usize,Vector3<f32>)>)
     {
         let mut command = String::with_capacity(30*wind.len());
@@ -207,6 +218,8 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+
+    /// Sets outer force value applied to object specified by id
     pub fn setForce(&self,id: usize, force: Vector3<f32>)
     {
         let mut command = String::with_capacity(30);
@@ -222,6 +235,7 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    /// Sends information about collision with surface to object specified by id
     pub fn sendSurfaceCollison(&self,id: usize, COR: f32,
         mi_s: f32, mi_d: f32, normalVector: &Vector3<f32>)
     {
@@ -244,6 +258,7 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    /// Get position of all objects in air
     pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::<(usize,Vector3<f32>)>::new();
@@ -258,6 +273,7 @@ impl Objects
         pos
     }
 
+    /// Get velocities of all objects in air
     pub fn getVelocities(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut vel = Vec::<(usize,Vector3<f32>)>::new();
@@ -272,6 +288,7 @@ impl Objects
         vel
     }
 
+    /// Get positions & velocities of all objects in air
     pub fn getPosVels(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>)>
     {
         let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>)>::new();
@@ -285,6 +302,8 @@ impl Objects
         drop(state);
         posvel
     }
+
+    /// Get positions, velocities & radius of collision of all objects in air
     pub fn getPosVelsRadius(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>, f32)>
     {
         let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>,f32)>::new();
@@ -308,6 +327,7 @@ impl Objects
     }
 }
 
+/// Notifies subsribers about type of objects in air
 fn sendModelInfo(info_access: &Arc<Mutex<HashMap<usize, ObjectInfo>>>) 
 {
     if let Ok(info) = info_access.lock()
@@ -325,6 +345,7 @@ fn sendModelInfo(info_access: &Arc<Mutex<HashMap<usize, ObjectInfo>>>)
     }
 }
 
+/// Deconstructor
 impl Drop for Objects {
     fn drop(&mut self) {
         printLog!("Dropping objects instance");

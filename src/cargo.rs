@@ -4,16 +4,22 @@ use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, config::ServerConfig, notification::Notification};
 use crate::printLog;
 
-
+/// Parameters of link between UAV and Object. Flexible-damping rope model.
 struct Link
 {
+    /// timeout counter. Link is removed if it reach timeout limit
     timeout: usize,
+    /// length of unloaded rope
     length: f32,
+    /// elasticity coefficient
     k: f32,
+    /// damping coefficient
     b: f32,
+    /// rope attachment relative position offset vector.
     hook_offset: Vector3<f32>
 }
 
+// Simulation of ropes connecting UAVs and Objects
 pub struct Cargo
 {
     running: Arc<AtomicBool>,
@@ -21,8 +27,10 @@ pub struct Cargo
     links: Arc<Mutex<HashMap<(usize,usize),Link>>>
 }
 
+/// Connect UAVs with object with rope
 impl Cargo
 {
+    /// Construct cargo instance. Require arcs to drones and objects to control them.
     pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
         let timeout_limit = ServerConfig::get_usize("timeout_limit");
@@ -114,6 +122,7 @@ impl Cargo
         Cargo {running, collision_checker: Some(collision_checker), links}
     }
 
+    /// Add new link between specified UAV and object
     pub fn addLink(&self,drone_id: usize, obj_id: usize, length: f32, k: f32, b: f32, hook_offset: Vector3<f32>)
     {
         let mut links_lck = self.links.lock().unwrap();
@@ -122,6 +131,7 @@ impl Cargo
         drop(links_lck);
     }
 
+    // Remove all links connected to specified UAV
     pub fn removeLink(&self, drone_id: usize)
     {
         let mut links_lck = self.links.lock().unwrap();
@@ -131,6 +141,7 @@ impl Cargo
     }
 }
 
+/// Send periodical notification with information about active links
 fn notifyAboutLinks(links: &HashMap<(usize, usize), Link>){
     let mut msg = String::with_capacity(5 + 15*links.len());
     msg.push_str("l:");
@@ -152,7 +163,7 @@ fn notifyAboutLinks(links: &HashMap<(usize, usize), Link>){
     Notification::sendMsg(&msg);
 }
 
-
+/// Deconstructor
 impl Drop for Cargo{
     fn drop(&mut self) {
         printLog!("Dropping cargo instance");

@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::hash::{Hash, Hasher};
 
+/// Parsed OBJ file
 pub struct Obj
 {
     pub _vertices: Vec<Vector3<f32>>,
@@ -12,11 +13,13 @@ pub struct Obj
 
 impl Obj
 {
+    /// Read obj from file
     pub fn from_file(file_path: &str)-> Self
     {
         Self::load_from_file(file_path, false)
     }
 
+    /// Read obj from file. Parsing normals and faces may be disable by setting verticesOnly to true.
     pub fn load_from_file(file_path: &str, verticesOnly: bool) -> Self {
         let file = File::open(file_path).expect("Can not open file");
         let reader = BufReader::new(file);
@@ -77,6 +80,7 @@ impl Obj
         Obj{_vertices: vertices, _normals: normals,faces} 
     }
 
+    /// Finds the coordinates of minimal cuboid that contains all vertices
     pub fn boundingBox(&self) -> (Vector3<f32>, Vector3<f32>)
     {
         let mut min = Vector3::repeat(f32::MAX);
@@ -88,7 +92,7 @@ impl Obj
         }
         (min,max)
     }
-
+    /// Get mesh. Mesh is matrix 3xN which columns are vertex's coordinates 
     pub fn getMesh(&self) -> DMatrix<f32>
     {
         let mut mesh = DMatrix::<f32>::zeros(3, self._vertices.len());
@@ -102,6 +106,7 @@ impl Obj
 }
 
 #[derive(Clone)]
+/// Parsed single face in OBJ file.
 pub struct Face
 {
     pub id:usize,
@@ -114,6 +119,7 @@ pub struct Face
 
 impl Face {
 
+    /// Constructor
     pub fn new(id : usize , vertices: [Vector3<f32>;3],normals: [Vector3<f32>;3]) -> Self
     {
         let s = vertices[1]-vertices[0];
@@ -133,19 +139,14 @@ impl Face {
                 base: vertices[0].clone()}
     }
 
+    /// Projects point on face. Return true if projection is inside triangle. 
+    /// If true second field in tuple is distance from face.
     pub fn projectPoint(&self, point: Vector3<f32>) -> (bool, f32)
     {
 
         let res = self.projectMatrix* (point-self.base);
         if res[0] >= 0.0 && res[0] <= 1.0 && res[1] >= 0.0 && res[1] <= 1.0 && res[0]+res[1] <= 1.0
         {
-            // if res[2].abs() < 0.1
-            // {
-            //     printLog!("Point: {}", point);
-            //     printLog!("Face vertex: {:?}", self._vertices);
-            //     printLog!("Face normal: {:?}", self.normal);
-            //     printLog!("Res: {}", res);            
-            // }
             return (true,res[2])
         } 
         (false, 0.0)

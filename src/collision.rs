@@ -4,7 +4,7 @@ use std::time::Instant;
 use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj};
 use crate::printLog;
 
-
+/// Detect collision in simulation. Checks collision uav-map, obj-map uav-uav and uav-obj.
 pub struct CollisionDetector
 {
     running: Arc<AtomicBool>,
@@ -13,6 +13,7 @@ pub struct CollisionDetector
 
 impl CollisionDetector
 {
+    /// Constructor
     pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
         let map_offset = ServerConfig::get_f32("map_offset");
@@ -60,7 +61,7 @@ impl CollisionDetector
                 let objs_pos_vels_radius = obj_lck.getPosVelsRadius();
                 drop(obj_lck);
                 
-                //Colision between objects are negligible
+                //Collision between objects are negligible
                 Self::colisions_between_drones(&drones_pos_vel,map.minimalDist);
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels_radius,map.minimalDist);
                 
@@ -87,6 +88,7 @@ impl CollisionDetector
             }
     }
 
+    /// Find collisions between pair of UAVs
     fn colisions_between_drones(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>, minimal_dist: f32)
     {
         for i in 0..drones_pos_vel.len() {
@@ -102,6 +104,7 @@ impl CollisionDetector
         }
     }
 
+    /// Find collisions between UAV and object
     fn colisions_drones_obj(drones_pos_vel: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
         objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>, minimal_dist: f32)
     {
@@ -110,13 +113,14 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < minimal_dist
                 {
-                    //printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
+                    printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }
         }
     }
 
     #[allow(dead_code)]
+    /// Find object outside boundary box and remove them
     fn boundary_box_obj(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>,
         objects: &Arc<Mutex<Objects>>, box_min: Vector3<f32>, box_max: Vector3<f32>)
     {
@@ -139,6 +143,7 @@ impl CollisionDetector
         }
     }
 
+    /// Find all collision between Object and map walls. Handles collision
     fn impulse_collision_projectiles(objs_pos_vels_radius: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>,
     objects: &Arc<Mutex<Objects>>, map: &Map)
     {
@@ -159,6 +164,7 @@ impl CollisionDetector
         }
     }
 
+    /// Converts quaterion to rotation matrix
     fn quaterionToRot3(q: &Vector4<f32>) -> Matrix3<f32>
     {
         Matrix3::new(q[0]*q[0]+q[1]*q[1]-q[2]*q[2]-q[3]*q[3], 2.0f32*(q[1]*q[2]-q[0]*q[3])           , 2.0f32*(q[1]*q[3]+q[0]*q[2]),
@@ -166,6 +172,7 @@ impl CollisionDetector
         2.0f32*(q[1]*q[3]-q[0]*q[2])                        , 2.0f32*(q[2]*q[3]+q[0]*q[1])           , q[0]*q[0]-q[1]*q[1]-q[2]*q[2]+q[3]*q[3])
     }
 
+    /// Find all collision between UAV and map walls. Handles collision
     fn impulse_collision_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
         drones: &Arc<Mutex<Drones>>,meshes: &mut HashMap<String,DMatrix<f32>>, types: &Vec<String>, map: &Map)
     {
@@ -209,6 +216,7 @@ impl CollisionDetector
 
 }
 
+/// Returns mesh of UAV. Load UAV OBJ file on first call.
 fn getMesh<'a>(meshes: &'a mut HashMap<String, DMatrix<f32>>, drone_type: & str) -> &'a DMatrix<f32> {
     if !meshes.contains_key(drone_type)
     {
@@ -219,6 +227,7 @@ fn getMesh<'a>(meshes: &'a mut HashMap<String, DMatrix<f32>>, drone_type: & str)
     meshes.get(drone_type).unwrap()
 }
 
+/// Deconstructor
 impl Drop for CollisionDetector{
     fn drop(&mut self) {
         printLog!("Dropping collision detector instance");

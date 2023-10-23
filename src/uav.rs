@@ -5,46 +5,57 @@ use crate::config::DroneConfig;
 use crate::printLog;
 
 
-
+/// State of single drone. Contains parsed information from physic simualtion
 pub struct DroneState
 {
+    /// time of simulation in s
     time: f32,
+    /// position and orientation of UAV. Position is given in meters, orientation is q0,qx,qy,qz quaterion
     pos: SVector<f32,7>,
+    /// linear and angular velocities in m/s and rad/s
     vel: Vector6<f32>,
+    /// rotor angular velocities in rad/s
     om: Vec<f32>,
 }
 
 impl DroneState {
+    /// Constructor
     pub fn new() -> Self {
         DroneState {time: 0.0, pos: SVector::repeat(0.0f32), vel: Vector6::repeat(0.0f32), om: Vec::new()}
     }
 
+    /// Get UAV position in meters
     pub fn getPos3(&self) -> Vector3<f32>
     {
         self.pos.fixed_view::<3, 1>(0, 0).into()
     }
 
+    /// Get UAV orientation (q0,qx,qy,qz quaterion)
     pub fn getOri(&self) -> Vector4<f32>
     {
         self.pos.fixed_view::<4, 1>(3, 0).into()
     }
 
+    /// Get UAV orienation as Euler angles in rad (Roll, Pitch, Yaw) 
     pub fn getOriRPY(&self) -> Vector3<f32>
     {
         let q: Vector4<f32> = self.pos.fixed_view::<4, 1>(3, 0).into();
         Self::quaterionsToRPY(q)
     }
 
+    /// Get linear velocity vector in m/s
     pub fn getVel(&self) -> Vector3<f32>
     {
         self.vel.fixed_view::<3, 1>(0, 0).into()
     }
 
+    /// Get angular velocity vector in rad/s
     pub fn getAngVel(&self) -> Vector3<f32>
     {
         self.vel.fixed_view::<3, 1>(3, 0).into()
     }
 
+    /// Converts quaterion to RPY Euler angles
     fn quaterionsToRPY(e: Vector4<f32>) -> Vector3<f32>
     {
         let mut RPY = Vector3::<f32>::zeros();
@@ -55,6 +66,7 @@ impl DroneState {
     }
 }
 
+/// Serializes drone state to string
 impl ToString for DroneState {
     fn to_string(&self) -> String {
         let mut result = String::with_capacity(200);
@@ -80,6 +92,7 @@ impl ToString for DroneState {
     }
 }
 
+/// Representation of single UAV
 pub struct UAV
 {
     pub id: usize,
@@ -97,6 +110,7 @@ pub struct UAV
 
 impl UAV
 {
+    // Spawns new UAV with its required processes
     pub fn new(_ctx: &mut zmq::Context,id : usize , name: &str, config_path: &str, state: Arc<Mutex<DroneState>>, objects: Arc<Mutex<Objects>>) -> Self {
         let config = DroneConfig::parse(&config_path).expect("Config file error");
 
@@ -193,6 +207,7 @@ impl UAV
         uav
     }
 
+    /// Starts listener process
     fn startListeners(_ctx: &mut zmq::Context, uav: &mut UAV, state: Arc<Mutex<DroneState>>)
     {
         let state_address = format!("ipc:///tmp/{}/state",uav.name.to_owned());
@@ -303,11 +318,13 @@ impl UAV
         }));
     }
 
+    /// Sends steering message to control process
     fn _sendSteeringMsg(&self, msg: &str)
     {
         self.steer_socket.send(&msg, 0).unwrap();
     }
 
+    /// Send control message to control process
     fn _sendControlMsg(&self, msg_str: &str) -> String
     {
         self.control_socket.send(&msg_str, 0).unwrap();
@@ -325,6 +342,7 @@ impl UAV
         }      
     }
 
+    /// Send atmosphere information to UAV
     pub fn sendAtmosphereInfo(&self, info: &AtmosphereInfo)
     {
         let mut command = String::with_capacity(30);
@@ -343,6 +361,7 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
+    /// Send outer force value to UAV
     pub fn updateForce(&self, force: &Vector3<f32>, torque: &Vector3<f32>)
     {
         let mut command = String::with_capacity(30);
@@ -362,6 +381,7 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
+    /// Sends command to release cargo to UAV process
     pub fn releaseCargo(&self, index: usize) -> (isize,isize)
     {
         if index >= self.config.cargo.len()
@@ -409,6 +429,7 @@ impl UAV
         (res, id)
     }
 
+    /// Sends command to fire 
     pub fn shootAmmo(&self, index: usize) -> (isize,isize)
     {
         if index >= self.config.ammo.len()
@@ -456,6 +477,7 @@ impl UAV
         (res, id)
     }
 
+    /// Sends information about colission with surface to UAV process
     pub fn sendSurfaceCollison(&self, COR: f32, mi_s: f32, mi_d: f32,
         collisionPoint: &Vector3<f32>, normalVector: &Vector3<f32>)
     {
@@ -482,6 +504,7 @@ impl UAV
         self._sendControlMsg(&command);
     }
 
+    /// Sends command to start jet engine
     pub fn sendStartJet(&self, index: usize)
     {
         let mut command = String::with_capacity(10);
@@ -493,6 +516,7 @@ impl UAV
 
 }
 
+/// Deconstructor
 impl Drop for UAV {
     fn drop(&mut self) {
         printLog!("Dropping drone: {}", self.name);

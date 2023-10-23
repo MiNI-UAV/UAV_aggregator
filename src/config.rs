@@ -6,17 +6,22 @@ use nalgebra::{DMatrix,Vector3};
 use xmltree::Element;
 use crate::obj::Obj;
 
+/// Path to aggregator configuration YAML file
 const CONFIG_FILE_PATH: &str = "configs/config.yaml";
 
+/// static configuration instance
 static CONFIG: Mutex<Option<serde_yaml::Value>> = Mutex::new(None);
+/// static variable to check if config was initialized
 static READY: AtomicBool = AtomicBool::new(false);
 
+/// Get configuration parameters. Contain parsed field from configuration file.
 pub struct ServerConfig
 {
 
 }
 
 impl ServerConfig {
+    /// Read & parse configuration file. Initialize class
     fn readConfig()
     {
         let f = std::fs::File::open(CONFIG_FILE_PATH).unwrap();
@@ -25,6 +30,7 @@ impl ServerConfig {
         READY.store(true, atomic::Ordering::Relaxed)
     }
 
+    /// Gets parameter with specified name (key) and try to parse it to usize
     pub fn get_usize(key :&str) -> usize
     {
         if !READY.load(atomic::Ordering::Relaxed)
@@ -36,6 +42,7 @@ impl ServerConfig {
         config_data[key].as_u64().unwrap() as usize
     }
 
+    /// Gets parameter with specified name (key) and try to parse it to f32
     pub fn get_f32(key :&str) -> f32
     {
         if !READY.load(atomic::Ordering::Relaxed)
@@ -47,6 +54,7 @@ impl ServerConfig {
         config_data[key].as_f64().unwrap() as f32
     }
 
+    /// Gets parameter with specified name (key) and try to parse it to string
     pub fn get_str(key :&str) -> String
     {
         if !READY.load(atomic::Ordering::Relaxed)
@@ -58,6 +66,7 @@ impl ServerConfig {
         config_data[key].as_str().unwrap().to_owned()
     }
 
+    /// Gets parameter with specified name (key) and try to parse it to bool
     pub fn get_bool(key :&str) -> bool
     {
         if !READY.load(atomic::Ordering::Relaxed)
@@ -73,6 +82,7 @@ impl ServerConfig {
 #[derive(Debug)]
 #[derive(Clone)]
 #[allow(dead_code)]
+/// Parsed ammunition parameters
 pub struct AmmoParams {
     pub name: String,
     pub model: String,
@@ -90,6 +100,7 @@ pub struct AmmoParams {
 #[derive(Debug)]
 #[derive(Clone)]
 #[allow(dead_code)]
+/// Parsed cargo parameters
 pub struct CargoParams {
     pub name: String,
     pub model: String,
@@ -106,6 +117,7 @@ pub struct CargoParams {
     pub CS: f32,
 }
 
+/// Parses ammunition parameters
 fn parse_ammo(element: &Element) -> AmmoParams {
     let name = element.name.clone();
     let model = element.get_child("model").unwrap().get_text().unwrap().to_string();
@@ -135,6 +147,7 @@ fn parse_ammo(element: &Element) -> AmmoParams {
     }
 }
 
+/// Parses cargo parameters
 fn parse_cargo(element: &Element) -> CargoParams {
     let name = element.name.clone();
     let model = element.get_child("model").unwrap().get_text().unwrap().to_string();
@@ -166,6 +179,7 @@ fn parse_cargo(element: &Element) -> CargoParams {
     }
 }
 
+/// Configuration of UAV
 #[derive(Clone)]
 pub struct DroneConfig {
     pub name: String,
@@ -176,6 +190,7 @@ pub struct DroneConfig {
 }
 
 impl DroneConfig {
+    /// Parses drone configuration form file
     pub fn parse(file_path: &str) -> Result<DroneConfig, Box<dyn std::error::Error>> {
         let mut file = File::open(file_path)?;
         let mut contents = String::new();
