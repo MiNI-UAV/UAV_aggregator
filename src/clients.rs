@@ -8,9 +8,10 @@ use serde_json::json;
 use crate::{drones::Drones, cargo::Cargo, config::ServerConfig, checksum::getChecksum};
 use crate::printLog;
 
-
+/// Path to folder containing UAV's configurations
 const DRONE_CONFIGS_PATH: &str = "./configs/drones_configs/";
 
+/// Handle simulation clients - visualizations
 pub struct Clients
 {
     running: Arc<AtomicBool>,
@@ -21,6 +22,7 @@ pub struct Clients
 
 impl Clients
 {
+    /// Contstuctor. Starts new process that handle incoming requests
     pub fn new(_ctx: zmq::Context, drones: Arc<Mutex<Drones>>, cargo: Arc<Mutex<Cargo>>) -> Self {
         let hb_disconnect: usize = ServerConfig::get_usize("hb_disconnect");
         let replyer_port: usize = ServerConfig::get_usize("replyer_port");
@@ -182,6 +184,7 @@ impl Clients
         Clients{running: running, _proxies: proxies, _control: control, _replyer: Some(replyer)}
     }
 
+    /// Returns information of running server as JSON
     fn getServerInfo() -> String
     {
         let configs: Vec<String> = read_dir(DRONE_CONFIGS_PATH).unwrap()
@@ -195,6 +198,7 @@ impl Clients
         serde_json::to_string(&info).unwrap()
     }
 
+    /// Handle incomming control message
     fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize) -> String
     {
         let mut splited = msg.split(";");
@@ -264,6 +268,7 @@ impl Clients
     }
 }
 
+/// Deconstructor
 impl Drop for Clients{
     fn drop(&mut self) {
         printLog!("Dropping clients instance");

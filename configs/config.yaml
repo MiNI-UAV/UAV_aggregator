@@ -10,13 +10,18 @@ COR: 0.5
 mi_s: 0.4
 mi_d: 0.3
 minimalDist: 1.0
-timeout_limit: 10
+timeout_limit: 5
+notify_period: 200
 
 #atmosphere
 temperature: 288.15
 pressure: 101300.0
 wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
+
+#object physic engine
+obj_physic_step_time: 3
+obj_physic_ode_solver: RK4
 
 #connection
 hb_disconnect: 3
@@ -29,5 +34,3 @@ first_port: 10000
 
 #other
 q_exit: false
-notifyTypeScaler: 10
-notifyObjTypeScaler: 20

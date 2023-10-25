@@ -1,10 +1,13 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time, collections::HashMap};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}};
+use std::{process::{Command, Stdio}, time::{self, Instant}, collections::HashMap};
 use nalgebra::Vector3;
-use crate::{printLog, config::ServerConfig, notification::Notification};
+use crate::{printLog, config::ServerConfig, notification::Notification, logger};
+use std::io::{BufRead, BufReader};
 
 
 
 #[derive(Debug)]
+/// State of single Object. Contains parsed information from object physic simualtion
 pub struct ObjectState
 {
     pub id: usize,
@@ -13,6 +16,7 @@ pub struct ObjectState
 }
 
 #[derive(Debug)]
+/// Extra information about object from drone configuration file
 pub struct ObjectInfo
 {
     pub model_name: String,
@@ -20,10 +24,12 @@ pub struct ObjectInfo
 }
 
 impl ObjectState {
+    /// Constructor
     pub fn new() -> Self {
         ObjectState {id: 0, pos: Vector3::repeat(-1.0f32), vel: Vector3::repeat(-1.0f32)}
     }
 
+    ///Parses Object state form string
     pub fn fromInfo(info: &str) -> Self {
         let mut id: usize = 0;
         let mut pos: Vector3<f32> = Vector3::repeat(-1.0f32);
@@ -42,6 +48,7 @@ impl ObjectState {
     }
 }
 
+/// All objects in simulation
 pub struct Objects
 {
     _ctx: zmq::Context,
@@ -51,16 +58,20 @@ pub struct Objects
     running: Arc<AtomicBool>,
 
     control_socket: zmq::Socket,
-    _drop_physic: Child,
     _state_proxy: Option<JoinHandle<()>>,
-    _state_cupturer: Option<JoinHandle<()>>
+    _state_cupturer: Option<JoinHandle<()>>,
+    _dropListener: Option<(JoinHandle<()>,JoinHandle<()>)>
 }
 
 impl Objects
 {
+    /// Constructor
     pub fn new(_ctx: zmq::Context, port: usize) -> Self {
         let drop_physic = Command::new("../UAV_drop_physic/build/drop")
-        .stdout(Stdio::null())
+        .arg("--dt").arg(ServerConfig::get_usize("obj_physic_step_time").to_string())
+        .arg("--ode").arg(ServerConfig::get_str("obj_physic_ode_solver"))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .expect("failed to execute drop physic process");
         let running = Arc::new(AtomicBool::new(true));
@@ -86,6 +97,8 @@ impl Objects
         let time_access = time.clone();
         let states_access = states.clone();
         let info_access = info.clone();
+        let mut last_notify = Instant::now();
+        let notify_period = ServerConfig::get_usize("notify_period").try_into().unwrap();
         let capture: JoinHandle<()> = thread::spawn(move ||
         {
             let capture_socket = ctx.socket(zmq::SUB).expect("Capture socket error");
@@ -93,8 +106,6 @@ impl Objects
             capture_socket.set_rcvtimeo(1000).unwrap();
             capture_socket.set_conflate(true).unwrap();
             capture_socket.connect("ipc:///tmp/drop_shot/state").unwrap();
-            let notify_type_scaler: usize = ServerConfig::get_usize("notifyObjTypeScaler");
-            let mut counter = 0;
             while r.load(Ordering::SeqCst) {
                 let mut obj_states_msg =  zmq::Message::new();
                 if let Err(_) = capture_socket.recv(&mut obj_states_msg, 0)
@@ -103,20 +114,42 @@ impl Objects
                 }
                 let obj_info = obj_states_msg.as_str().unwrap().to_string();
                 Self::parseInfo(&time_access,&states_access,obj_info);
-                counter = counter + 1;
-                if counter >= notify_type_scaler
+                if last_notify.elapsed().as_millis() > notify_period
                 {
+                    last_notify = Instant::now();
                     sendModelInfo(&info_access);
-                    counter = 0;
                 }
             }
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
+        let stdout = drop_physic.stdout.unwrap();
+            let reader_stdout = BufReader::new(stdout);
+            let stderr = drop_physic.stderr.unwrap();
+            let reader_stderr = BufReader::new(stderr);
+        let listener = (thread::spawn(move || {
+            for line in reader_stdout.lines()
+            {
+                if let Ok(content) = line
+                {
+                    logger::Logger::print("drop", "physic", logger::COLOR_MAGENTA, &content);
+                }
+            }
+        }),
+        thread::spawn(move || {
+            for line in reader_stderr.lines()
+            {
+                if let Ok(content) = line
+                {
+                    logger::Logger::print("drop", "physic", logger::COLOR_RED, &content);
+                }
+            }
+        }));
         Objects {_ctx: _ctx,_time: time,states: states,info, running: running, control_socket: control_socket,
-             _drop_physic: drop_physic, _state_proxy: Some(proxy), _state_cupturer: Some(capture)}
+            _state_proxy: Some(proxy), _state_cupturer: Some(capture), _dropListener: Some(listener)}
     }
 
+    /// Parses objects state from string
     fn parseInfo(time: &Arc<Mutex<f32>>, states: &Arc<Mutex<Vec<ObjectState>>>, info: String)
     {
         let mut newStates = Vec::new();
@@ -141,6 +174,7 @@ impl Objects
         drop(state_lck);
     }
 
+    /// Sends control message to object's simulation
     fn _sendControlMsg(&self, msg: &str) -> String
     {
         self.control_socket.send(&msg, 0).unwrap();
@@ -151,6 +185,7 @@ impl Objects
         rep.to_string()
     }
 
+    /// Add new object to simulation
     pub fn addObj(&self, mass: f32, CS: f32, pos: Vector3<f32>, vel: Vector3<f32>, obj_info: ObjectInfo) -> isize
     {
         let mut command = String::with_capacity(60);
@@ -182,6 +217,7 @@ impl Objects
         id
     }
 
+    /// Remove object from simulation
     pub fn removeObj(&self, id: usize)
     {
         self._sendControlMsg(&format!("r:{}",id.to_string()));
@@ -191,6 +227,7 @@ impl Objects
         }
     }
 
+    /// Peridically updates winds info for objects
     pub fn updateWind(&self, wind: Vec<(usize,Vector3<f32>)>)
     {
         let mut command = String::with_capacity(30*wind.len());
@@ -208,6 +245,8 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+
+    /// Sets outer force value applied to object specified by id
     pub fn setForce(&self,id: usize, force: Vector3<f32>)
     {
         let mut command = String::with_capacity(30);
@@ -223,6 +262,7 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    /// Sends information about collision with surface to object specified by id
     pub fn sendSurfaceCollison(&self,id: usize, COR: f32,
         mi_s: f32, mi_d: f32, normalVector: &Vector3<f32>)
     {
@@ -245,6 +285,7 @@ impl Objects
         self._sendControlMsg(&command);
     }
 
+    /// Get position of all objects in air
     pub fn getPositions(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut pos = Vec::<(usize,Vector3<f32>)>::new();
@@ -259,6 +300,7 @@ impl Objects
         pos
     }
 
+    /// Get velocities of all objects in air
     pub fn getVelocities(&self) -> Vec<(usize,Vector3<f32>)>
     {
         let mut vel = Vec::<(usize,Vector3<f32>)>::new();
@@ -273,6 +315,7 @@ impl Objects
         vel
     }
 
+    /// Get positions & velocities of all objects in air
     pub fn getPosVels(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>)>
     {
         let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>)>::new();
@@ -286,6 +329,8 @@ impl Objects
         drop(state);
         posvel
     }
+
+    /// Get positions, velocities & radius of collision of all objects in air
     pub fn getPosVelsRadius(&self) -> Vec<(usize,Vector3<f32>, Vector3<f32>, f32)>
     {
         let mut posvel = Vec::<(usize,Vector3<f32>,Vector3<f32>,f32)>::new();
@@ -309,6 +354,7 @@ impl Objects
     }
 }
 
+/// Notifies subsribers about type of objects in air
 fn sendModelInfo(info_access: &Arc<Mutex<HashMap<usize, ObjectInfo>>>) 
 {
     if let Ok(info) = info_access.lock()
@@ -326,22 +372,21 @@ fn sendModelInfo(info_access: &Arc<Mutex<HashMap<usize, ObjectInfo>>>)
     }
 }
 
+/// Deconstructor
 impl Drop for Objects {
     fn drop(&mut self) {
         printLog!("Dropping objects instance");
         self.running.store(false, Ordering::SeqCst);
+        let listener = self._dropListener.take().unwrap();
         loop {
-            match self._drop_physic.try_wait() {
-                Err(E) => printLog!("{}", E),
-                Ok(None) =>
-                {
-                    self._sendControlMsg("s");
-                    thread::sleep(time::Duration::from_millis(50));
-                }
-                Ok(_) =>
-                {
-                    break;
-                }
+            if listener.0.is_finished() && listener.1.is_finished(){
+                listener.0.join().expect("drop cout wait");
+                listener.1.join().expect("drop cerr wait");
+                break;
+            }
+            else{
+                self._sendControlMsg("s");
+                thread::sleep(time::Duration::from_millis(50));
             }
         }
         self._state_proxy.take().unwrap().join().expect("Join error");

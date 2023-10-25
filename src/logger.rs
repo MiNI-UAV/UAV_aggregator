@@ -4,21 +4,33 @@ use std::sync::Mutex;
 use std::time::{SystemTime,UNIX_EPOCH};
 use std::time::Instant;
 
+/// session identificator
 static SESSION: Mutex<String> = Mutex::new(String::new());
+/// File descriptor to log file
 pub static LOG_FILE: Mutex<Option<File>> = Mutex::new(Option::None);
+/// Path to folder where logs are stored
 const LOG_FOLDER: &str = "./logs/";
+/// Start of application - timestamp
 pub static START_TIME: Mutex<Option<Instant>> = Mutex::new(None);
 
-//Colors
+/// Changes color of UNIX terminal to BLACK
 pub const COLOR_NORMAL: &str =  "\x1B[0m";
+/// Changes color of UNIX terminal to RED
 pub const COLOR_RED: &str =  "\x1B[31m";
+/// Changes color of UNIX terminal to GREEN
 pub const COLOR_GREEN: &str =  "\x1B[32m";
+/// Changes color of UNIX terminal to YELLOW
 pub const COLOR_YELLOW: &str = "\x1B[33m";
+/// Changes color of UNIX terminal to BLUE
 pub const COLOR_BLUE: &str = "\x1B[34m";
+/// Changes color of UNIX terminal to MAGENTA
 pub const COLOR_MAGENTA: &str = "\x1B[35m";
+/// Changes color of UNIX terminal to CYAN
 pub const COLOR_CYAN: &str = "\x1B[36m";
+/// Changes color of UNIX terminal to WHITE
 pub const COLOR_WHITE: &str = "\x1B[37m";
 
+/// Print wrapper that also log output to file
 #[macro_export]
 macro_rules! printLog
 {
@@ -34,20 +46,19 @@ macro_rules! printLog
         let mut log_file = crate::logger::LOG_FILE.lock().unwrap();
         if let Some(file) = log_file.as_mut()
         {
-            std::io::Write::write(file,time_elapsed.to_string().as_bytes()).unwrap();
             std::io::Write::write(file,format!("{:9.3} [Server] ",time_elapsed).as_bytes()).unwrap();
             std::io::Write::write(file,format!($($arg)*).as_bytes()).expect("Unable to write log");
             std::io::Write::write(file,b"\n").unwrap();
         }
     }};
 }
-
+/// Logger. Used to log execution of program
 pub struct Logger
 {}
 
 impl Logger
 {
-
+    /// Initialization
     fn init()
     {
         let mut time = START_TIME.lock().unwrap(); 
@@ -71,6 +82,7 @@ impl Logger
         printLog!("Session: {}",session);
     }
 
+    /// Get session identifier
     fn determinateSessionName() -> String
     {
         let mut session = SESSION.lock().unwrap();
@@ -78,11 +90,13 @@ impl Logger
         session.to_string()
     }
 
+    /// Starts log session
     pub fn startSession()
     {
         Self::init();
     }
 
+    /// End log session
     pub fn endSession()
     {
         let session = SESSION.lock().unwrap();
@@ -92,6 +106,7 @@ impl Logger
         }
     }
 
+    /// Print wrapper that add extra prefix and color of message. Message is also logged to file
     pub fn print(name: &str, source: &str, color: &str, msg: &str)
     {
         let mut log_file = crate::logger::LOG_FILE.lock().unwrap();

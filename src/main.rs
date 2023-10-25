@@ -19,6 +19,7 @@ pub mod checksum;
 pub mod logger;
 
 fn main() {
+    // Start logger and check if asset were changed
     logger::Logger::startSession();
     checksum::calcChecksum();
 
@@ -26,9 +27,11 @@ fn main() {
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
 
+    // Stop simulation on C-c
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
     }).expect("Error setting Ctrl-C handler");
+    // Stop simulation on key Q pressed
     if config::ServerConfig::get_bool("q_exit")
     {
         let device_state = DeviceState::new();
@@ -41,9 +44,9 @@ fn main() {
         });
     }
     
+    // Initialize simulation processes
     let stopSocket = ctx.socket(zmq::SocketType::PUB).unwrap();
     stopSocket.bind("inproc://stop").unwrap();
-
     notification::Notification::init(ctx.clone(),
         &(config::ServerConfig::get_usize("notification_port")));
     let _objects = Arc::new(Mutex::new(objects::Objects::new(ctx.clone(),
@@ -55,9 +58,12 @@ fn main() {
     let _atmosphere = atmosphere::Atmosphere::new(_drones.clone(),_objects.clone());
     let _colision_detector = collision::CollisionDetector::new(_drones.clone(),_objects.clone());
 
+    // Wait until simulation is over
     while running.load(Ordering::SeqCst) {
         thread::sleep(time::Duration::from_millis(300));
     }
+
+    // Free resources
     printLog!("Bye!");
     stopSocket.send("TERMINATE", 0).unwrap();
     let mut drones_lck = _drones.lock().unwrap();
@@ -71,6 +77,5 @@ fn main() {
     drop(_drones);
     drop(_objects);
     drop(ctx);
-
     logger::Logger::endSession();
 }
