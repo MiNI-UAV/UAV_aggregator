@@ -46,7 +46,6 @@ macro_rules! printLog
         let mut log_file = crate::logger::LOG_FILE.lock().unwrap();
         if let Some(file) = log_file.as_mut()
         {
-            std::io::Write::write(file,time_elapsed.to_string().as_bytes()).unwrap();
             std::io::Write::write(file,format!("{:9.3} [Server] ",time_elapsed).as_bytes()).unwrap();
             std::io::Write::write(file,format!($($arg)*).as_bytes()).expect("Unable to write log");
             std::io::Write::write(file,b"\n").unwrap();

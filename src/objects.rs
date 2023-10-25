@@ -1,6 +1,8 @@
-use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}, process::{Command, Stdio, Child}, time::{self, Instant}, collections::HashMap};
+use std::{thread::{self, JoinHandle}, sync::{Arc, Mutex, atomic::{Ordering, AtomicBool}}};
+use std::{process::{Command, Stdio}, time::{self, Instant}, collections::HashMap};
 use nalgebra::Vector3;
-use crate::{printLog, config::ServerConfig, notification::Notification};
+use crate::{printLog, config::ServerConfig, notification::Notification, logger};
+use std::io::{BufRead, BufReader};
 
 
 
@@ -56,9 +58,9 @@ pub struct Objects
     running: Arc<AtomicBool>,
 
     control_socket: zmq::Socket,
-    _drop_physic: Child,
     _state_proxy: Option<JoinHandle<()>>,
-    _state_cupturer: Option<JoinHandle<()>>
+    _state_cupturer: Option<JoinHandle<()>>,
+    _dropListener: Option<(JoinHandle<()>,JoinHandle<()>)>
 }
 
 impl Objects
@@ -68,7 +70,8 @@ impl Objects
         let drop_physic = Command::new("../UAV_drop_physic/build/drop")
         .arg("--dt").arg(ServerConfig::get_usize("obj_physic_step_time").to_string())
         .arg("--ode").arg(ServerConfig::get_str("obj_physic_ode_solver"))
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .expect("failed to execute drop physic process");
         let running = Arc::new(AtomicBool::new(true));
@@ -120,8 +123,30 @@ impl Objects
         });
         let control_socket  =_ctx.socket(zmq::REQ).expect("creating socket error");
         control_socket.connect("ipc:///tmp/drop_shot/control").expect("control connect error");
+        let stdout = drop_physic.stdout.unwrap();
+            let reader_stdout = BufReader::new(stdout);
+            let stderr = drop_physic.stderr.unwrap();
+            let reader_stderr = BufReader::new(stderr);
+        let listener = (thread::spawn(move || {
+            for line in reader_stdout.lines()
+            {
+                if let Ok(content) = line
+                {
+                    logger::Logger::print("drop", "physic", logger::COLOR_MAGENTA, &content);
+                }
+            }
+        }),
+        thread::spawn(move || {
+            for line in reader_stderr.lines()
+            {
+                if let Ok(content) = line
+                {
+                    logger::Logger::print("drop", "physic", logger::COLOR_RED, &content);
+                }
+            }
+        }));
         Objects {_ctx: _ctx,_time: time,states: states,info, running: running, control_socket: control_socket,
-             _drop_physic: drop_physic, _state_proxy: Some(proxy), _state_cupturer: Some(capture)}
+            _state_proxy: Some(proxy), _state_cupturer: Some(capture), _dropListener: Some(listener)}
     }
 
     /// Parses objects state from string
@@ -352,18 +377,16 @@ impl Drop for Objects {
     fn drop(&mut self) {
         printLog!("Dropping objects instance");
         self.running.store(false, Ordering::SeqCst);
+        let listener = self._dropListener.take().unwrap();
         loop {
-            match self._drop_physic.try_wait() {
-                Err(E) => printLog!("{}", E),
-                Ok(None) =>
-                {
-                    self._sendControlMsg("s");
-                    thread::sleep(time::Duration::from_millis(50));
-                }
-                Ok(_) =>
-                {
-                    break;
-                }
+            if listener.0.is_finished() && listener.1.is_finished(){
+                listener.0.join().expect("drop cout wait");
+                listener.1.join().expect("drop cerr wait");
+                break;
+            }
+            else{
+                self._sendControlMsg("s");
+                thread::sleep(time::Duration::from_millis(50));
             }
         }
         self._state_proxy.take().unwrap().join().expect("Join error");
