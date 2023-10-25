@@ -19,6 +19,10 @@ pressure: 101300.0
 wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
 
+#object physic engine
+obj_physic_step_time: 3
+obj_physic_ode_solver: RK4
+
 #connection
 hb_disconnect: 3
 client_limit: 4

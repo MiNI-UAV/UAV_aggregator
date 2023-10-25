@@ -66,6 +66,8 @@ impl Objects
     /// Constructor
     pub fn new(_ctx: zmq::Context, port: usize) -> Self {
         let drop_physic = Command::new("../UAV_drop_physic/build/drop")
+        .arg("--dt").arg(ServerConfig::get_usize("obj_physic_step_time").to_string())
+        .arg("--ode").arg(ServerConfig::get_str("obj_physic_ode_solver"))
         .stdout(Stdio::null())
         .spawn()
         .expect("failed to execute drop physic process");
