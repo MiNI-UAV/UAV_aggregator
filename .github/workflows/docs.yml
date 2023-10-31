@@ -1,0 +1,40 @@
+name: Build and Publish Rust Documentation
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-publish-rust-doc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build Rust documentation
+        run: |
+          cargo doc --no-deps  # Generate documentation using cargo
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+        shell: bash
+
+      - name: Create and deploy to a separate branch (e.g., gh-pages)
+        run: |
+          git checkout --orphan gh-pages
+          git reset --hard
+          mv target/doc/* ./
+          git add -A
+          git commit -m "Update Rust documentation"
+          git push -f origin gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
