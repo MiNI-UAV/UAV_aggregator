@@ -21,6 +21,7 @@ jobs:
       - name: Build Rust documentation
         run: |
           cargo doc --no-deps  # Generate documentation using cargo
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=UAV_aggregator\">" > target/doc/index.html
 
       - name: Configure Git
         run: |
