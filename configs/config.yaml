@@ -1,36 +1,70 @@
-#map
+############# MAP #############
+# Simulation map name. It mustcorrespond to one of map from assets
 map: city
+# Offset of map bounding box in meters. 
+# Bounding box is minimal cuboid that whole map is in. Loads out of cuboid are automatically remove.
 map_offset: 30
+###############################
 
-#collisions
+########## COLLISIONS #########
+# collision grid size. Number of cubes in X, Y, Z
 grid: 100, 100, 10
+# Tolerance in detecting collisions
 collisionPlusEps: 0.1
 collisionMinusEps: -0.3
+# Coefficient of Restitution
 COR: 0.5
+# Static friction factor
 mi_s: 0.4
+# Dynamic friction factor
 mi_d: 0.3
+# Distance between aircraft and object when collision is detected
 minimalDist: 1.0
-timeout_limit: 5
-notify_period: 200
+###############################
 
-#atmosphere
+############ LINKS ############
+# Timeout of rope if object or aircraft no exist
+timeout_limit: 5
+# Notification about links period in ms
+notify_period: 200
+###############################
+
+########## ATMOSPHERE #########
+# Air temperature in K
 temperature: 288.15
+# Air pressure in K
 pressure: 101300.0
+# Wind model as position function. Let p is position in NED world frame in meter. 
+# Wind velocity in this place is equal wind_matrix * p + wind_bias
 wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
+###############################
 
-#object physic engine
+
+######### DROP PHYSIC #########
+# Step time of drop physic simulation in ms
 obj_physic_step_time: 3
+# ODE algorithm in drop physic
 obj_physic_ode_solver: RK4
 
-#connection
+######### CONNECTION #########
+# After how many skiped heartbeats server should close simulation of specific aircraft
 hb_disconnect: 3
+# Limit of connected client at once
 client_limit: 4
+# Port where notification socket is bind
 notification_port: 8000
+# Port where main replyer socket is bind
 replyer_port: 9000
+# Port where drone state publisher socket is bind
 drones_port: 9090
+# Port where object state publisher socket is bind
 object_port: 9100
+# First socket used in communication with visualization
 first_port: 10000
+###############################
 
-#other
+######### OTHER #########
+# Is q key recognize as exit from simulation.
 q_exit: false
+###############################

@@ -1,0 +1,362 @@
+<!-- Aircraft's parameters configuration file -->
+<params>
+   <!-- Default name of aircraft, it's usually overwritten by visualization -->
+   <name>drone1</name>
+   <!-- Name of assets that should be used to visualize aircraft. Type must correspond to model in server assets -->
+   <type>spitfire_mini</type>
+   <!-- Initial state of aircraft -->
+   <initial>
+      <!-- Initial control mode -->
+      <mode>FMANUAL</mode>
+      <!-- Initial position in NED world frame in meters -->
+      <position>5.0, 0.0,  -2.0</position>
+      <!-- Initial orientation given in RPY Euler angles in radians -->
+      <orientation>0.0, 0.0, 0.0</orientation>
+      <!-- Initial linear velocity in NED world frame in meters per second -->
+      <velocity>20.0, 0.0, 0.0</velocity>
+   </initial>
+   <!-- Inertia parameters  -->
+   <ineria>
+      <!-- Aircraft mass in kg  -->
+      <mass>4.7</mass>
+      <!-- Aircraft moments of inertia in kg*m2 -->
+      <Ix>0.075</Ix>
+      <Iy>0.085</Iy>
+      <Iz>0.13</Iz>
+      <Ixy>0.0</Ixy>
+      <Ixz>0.0</Ixz>
+      <Iyz>0.0</Iyz>
+   </ineria>
+   <!-- List of rotors that propel aircraft  -->
+   <rotors no='1'> <!-- Number of rotors  -->
+      <!-- Single rotor instance  -->
+      <rotor>
+         <!-- Thrust force coefficent -->
+         <forceCoff>0.000151</forceCoff>
+         <!-- Thrust torque coefficent -->
+         <torqueCoff>0.000000019</torqueCoff>
+         <!-- Relative position of rotor given in NED body frame in m -->
+         <position>-0.25, 0.0, 0.0</position>
+         <!-- Rotor spin axis given in NED body frame -->
+         <axis>1.0, 0.0, 0.0</axis>
+         <!-- List of hinges between rotor and aircraft -->
+         <hinges no='1'> <!-- Number of hinges (max 2 hinges) -->
+            <!-- Single hinge instance -->
+            <hinge>
+               <!-- Hinge axis -->
+               <axis>0.0, 1.0, 0.0</axis>
+               <!-- Hinge trim deflection in radians -->
+               <trim>0.0</trim>
+               <!-- Hinge max deflection in radians -->
+               <max>1.0</max>
+               <!-- Hinge min deflection in radians -->
+               <min>-1.0</min>
+            </hinge>
+         </hinges>
+         <!-- Rotor spin direction. 1 for CCW, -1 for CW -->
+         <direction>1</direction>
+         <!-- Rotor inertial time constant in second -->
+         <timeConstant>0.2</timeConstant>
+         <!-- Rotor max angular velocity in rad/s -->
+         <maxSpeed>400</maxSpeed>
+         <!-- Rotor angular velocity when hover in rad/s -->
+         <hoverSpeed>200</hoverSpeed>
+      </rotor>
+   </rotors>
+   <!-- List of jets that propel aircraft  -->
+   <jets no='1'> <!-- Number of jets -->
+      <!-- Single jet instance  -->
+      <jet>
+         <!-- Relative position of jet given in NED body frame in m -->
+         <position>-0.1, 0.0, 0.0</position>
+         <!-- Jet thrust direction in NED body frame -->
+         <axis>1.0, 0.0, 0.0</axis>
+         <!-- List of hinges between rotor and aircraft -->
+         <hinges no='0'></hinges> <!-- Number of hinges (max 2 hinges) -->
+         <!-- Number of burn phases -->
+         <phases>4</phases>
+         <!-- Thrust in specific phases in N -->
+         <thrust>100, 80, 70, 0</thrust>
+         <time>0.5, 0.7, 5.0, 5.2</time>
+      </jet>
+   </jets>
+   <!-- Surface deflection impact on aerodynamic coefficients -->
+   <surface no='4'> <!-- Number of control surfaces -->
+      <matrix>
+          0.0,  0.0,  0.0,  0.0,
+          0.0,  0.0,  0.0,  0.0,
+          0.0,  0.0,  0.0,  0.0,
+         -0.5,  0.5,  0.0,  0.0,
+          0.0,  0.0,  1.0,  0.0,
+          0.0,  0.0,  0.0,  0.2
+      </matrix>
+      <!-- Control surfaces min deflection in radians -->
+      <min>
+         -0.1, -0.1, -0.1, -0.1
+      </min>
+      <!-- Control surfaces max deflection in radians -->
+      <max>
+          0.1,  0.1,  0.1,  0.1
+      </max>
+      <!-- Control surfaces trim deflection in radians -->
+      <trim>
+          0.0,  0.0,  0.0,  0.0
+      </trim>
+   </surface>
+   <!-- Aerodynamic parameters -->
+   <aero>
+      <!-- Drag area in m2 -->
+      <S>0.225</S>
+      <!-- Drag lever arm in m -->
+      <d>0.01</d>
+      <!-- Aspect ratio / Oswald number influent -->
+      <eAR>0</eAR>
+      <!-- Constant aerodynamic coefficients -->
+      <C0>-0.05, 0.0, -0.5, 0.0, 0.0, 0.0</C0>
+      <!-- Angular velocity impact on aerodynamic coefficients -->
+      <Cpqr>
+          0.0,   0.0,   0.0,
+          0.0,   0.0,   0.0,
+          0.0,   0.0,   0.0,
+         -3.5,   0.0,   0.0,
+          0.0,  -3.5,   0.0,
+          0.0,   0.0,  -3.5
+      </Cpqr>
+      <!-- AOA & SOA impact on aerodynamic coefficients -->
+      <Cab>
+          0.0 ,  0.0 , -0.3,  0.0,
+          0.0 , -0.1 ,  0.0,  0.0,
+         -3.8 ,  0.0 ,  0.0,  0.0,
+          0.0 ,  0.0 ,  0.0,  0.0,
+         -0.05,  0.0 ,  0.0,  0.0,
+          0.0 ,  0.02,  0.0,  0.0
+      </Cab>
+      <!-- Range limit within coefficients are used -->
+      <stallLimit>0.35</stallLimit>
+   </aero>
+   <!-- List of PID controllers -->
+   <PID>
+      <!-- Single PID controller instance  -->
+      <X> <!-- Name of controller -->
+         <!-- Proportional element  -->
+         <P>0.8</P>
+         <!-- Inertial element -->
+         <I>0.01</I>
+         <!-- Derivative element -->
+         <D>0.0</D>
+         <!-- Output limits -->
+         <min>-30</min>
+         <max>30</max>
+      </X>
+      <Y>
+         <P>0.8</P>
+         <I>0.01</I>
+         <D>0.0</D>
+         <min>-30</min>
+         <max>30</max>
+      </Y>
+      <Z>
+         <P>2.122</P>
+         <I>0.035</I>
+         <D>-0.387</D>
+         <min>-2.2</min>
+         <max>2</max>
+      </Z>
+      <U>
+         <P>-0.05</P>
+         <I>-0.001</I>
+         <D>0.0</D>
+         <min>-0.3</min>
+         <max>0.3</max>
+      </U>
+      <V>
+         <P>0.05</P>
+         <I>0.001</I>
+         <D>0.0</D>
+         <min>-0.3</min>
+         <max>0.3</max>
+      </V>
+      <W>
+         <P>-3556.149</P>
+         <I>-538.572</I>
+         <D>-112.917</D>
+         <min>-500</min>
+         <max>500</max>
+      </W>
+      <Fi>
+         <P>9.584</P>
+         <I>0.798</I>
+         <D>0.192</D>
+         <min>-100</min>
+         <max>100</max>
+      </Fi>
+      <Theta>
+         <P>5.191</P>
+         <I>0.228</I>
+         <D>0.127</D>
+         <min>-100</min>
+         <max>100</max>
+      </Theta>
+      <Psi>
+         <P>7.288</P>
+         <I>0.230</I>
+         <D>-0.151</D>
+         <min>-500</min>
+         <max>500</max>
+      </Psi>
+      <Roll>
+         <P>-6.249</P>
+         <I>-0.904</I>
+         <D>-0.219</D>
+         <min>-250</min>
+         <max>250</max>
+      </Roll>
+      <Pitch>
+         <P>6.304</P>
+         <I>1.174</I>
+         <D>0.433</D>
+         <min>-250</min>
+         <max>250</max>
+      </Pitch>
+      <Yaw>
+         <P>112.662</P>
+         <I>22.778</I>
+         <D>3.419</D>
+         <min>-250</min>
+         <max>250</max>
+      </Yaw>
+   </PID>
+   <!-- Control mixers -->
+   <mixers>
+      <!-- Climb rate, Roll rate, Pitch rate, Yaw rate to rotor convertion -->
+      <rotorMixer>
+         1,  0,  0,  0,
+      </rotorMixer>
+      <!-- Climb rate, Roll rate, Pitch rate, Yaw rate to control surface deflaction convertion -->
+      <surfaceMixer>
+         0,  -0.1,   0.0,   0.0,
+         0,   0.1,   0.0,   0.0,
+         0,   0.0,   0.1,   0.0,
+         0,   0.0,   0.0,   0.1
+      </surfaceMixer>
+   </mixers>
+   <!-- Navigation system parameter -->
+   <navi>
+      <!-- List of sensors --> 
+      <sensors>
+         <!-- Single sensor controller instance  -->
+         <accelerometer> <!-- sensor name -->
+            <!-- sensor reading standard deviation -->
+            <sd>0.001</sd>
+            <!-- sensor reading bias -->
+            <bias>0.0, 0.0, 0.0</bias>
+            <!-- sensor refresh time -->
+            <refreshTime>0.0025</refreshTime>
+         </accelerometer>
+         <gyroscope>
+            <sd>0.01</sd>
+            <bias>0.0, 0.0, 0.0</bias>
+            <refreshTime>0.0025</refreshTime>
+         </gyroscope>
+         <magnetometer>
+            <sd>0.01</sd>
+            <bias>0.0, 0.0, 0.0</bias>
+            <refreshTime>0.0025</refreshTime>
+         </magnetometer>
+         <barometer>
+            <sd>0.01</sd>
+            <bias>0.0, 0.0, 0.0</bias>
+            <refreshTime>0.01</refreshTime>
+         </barometer>
+         <GPS>
+            <sd>0.2</sd>
+            <bias>0.0, 0.0, 0.0</bias>
+            <refreshTime>0.3</refreshTime>
+         </GPS>
+         <GPSVel>
+            <sd>0.1</sd>
+            <bias>0.0, 0.0, 0.0</bias>
+            <refreshTime>0.3</refreshTime>
+         </GPSVel>
+      </sensors>
+      <!-- AHRS parameters --> 
+      <AHRS>
+         <!-- AHRS type: Complementary or EKF --> 
+         <type>Complementary</type>
+         <!-- alpha coefficent of Complementary Filter--> 
+         <alpha>0.9</alpha>
+         <!-- R & Q coefficent of EKF Filter--> 
+         <Q>1e-14</Q>
+         <R>1e-2</R>
+      </AHRS>
+      <!-- EKF parameters -->
+      <EKF>
+         <!-- predict phase scaler -->
+         <predictScaler>1e1</predictScaler>
+         <!-- update phase scaler -->
+         <updateScaler>1e-4</updateScaler>
+         <!-- addictional barometer scaler -->
+         <baroScaler>1</baroScaler>
+         <!-- z axis barometer scaler -->
+         <zScaler>1e1</zScaler>
+      </EKF>
+   </navi>
+   <!-- List of ammunition onboard -->
+   <ammo no='2'> <!-- Number of ammunition type onboard -->
+      <!-- Single ammunition instance -->
+      <paintball>  <!-- Ammunition name -->
+         <!-- Visualization model of bullet -->
+         <model>paintball</model>
+         <!-- Initial velocity given in NED body frame in m/s -->
+         <V0>90.0, 0.0, 0.0</V0>
+         <!-- Relative position of ammo given in NED body frame in m -->
+         <position>0.0, 0.0, 0.1</position>
+         <!-- Reload time in second -->
+         <reload>0.3</reload>
+         <!-- Air drag and collisions equivalent radius -->
+         <radius>0.003</radius>
+         <!-- Constant aerodynamic coefficient -->
+         <C0>0.47</C0>
+         <!-- bullet mass -->
+         <mass>0.003</mass>
+         <!-- ammount of ammunition onboard -->
+         <ammount>100</ammount>
+      </paintball>
+      <bullet9mm>
+         <model>9mm</model>
+         <V0>350.0, 0.0, 0.0</V0>
+         <position>0.0, 0.0, 0.1</position>
+         <reload>0.1</reload>
+         <radius>0.0045</radius>
+         <C0>0.47</C0>
+         <mass>0.008</mass>
+         <ammount>20</ammount>
+      </bullet9mm>
+   </ammo>
+   <!-- List of cargo onboard -->
+   <cargo no='1'> <!-- Number of cargo type onboard -->
+      <!-- Single cargo instance -->
+      <parcel> <!-- Cargo name -->
+         <!-- Visualization model of cargo -->
+         <model>parcel</model>
+         <!-- Rope hook offset given in NED body frame in m -->
+         <hook>0.0, 0.0, 0.0</hook>
+         <!-- Rope lenght -->
+         <length>5.0</length>
+         <!-- Rope flexible factor -->
+         <k>10.0</k>
+         <!-- Rope dumping factor -->
+         <b>2.0</b>
+         <!-- Reload time in second -->
+         <reload>2.0</reload>
+         <!-- Air drag and collisions equivalent radius -->
+         <radius>0.1</radius>
+         <!-- Constant aerodynamic coefficient -->
+         <C0>0.47</C0>
+         <!-- bullet mass -->
+         <mass>0.1</mass>
+         <!-- ammount of ammunition onboard -->
+         <ammount>2</ammount>
+      </parcel>
+   </cargo>
+</params>

@@ -4,6 +4,7 @@ use std::path::Path;
 use std::str;
 use sha1::{Sha1, Digest};
 use serde_json::json;
+use regex::Regex;
 
 use crate::{drones::Drones, cargo::Cargo, config::ServerConfig, checksum::getChecksum};
 use crate::printLog;
@@ -166,7 +167,8 @@ impl Clients
                         file_name.push_str(&hash_val);
                         file_name.push_str(".xml");
                         let mut file = File::create(file_name).unwrap();
-                        file.write_all(content.as_bytes()).expect("Unable to write config");
+                        let content_without_comments = Self::remove_xml_comments(content);
+                        file.write_all(content_without_comments.as_bytes()).expect("Unable to write config");
                         drop(file);
                         let mut reply = String::with_capacity(12);
                         reply.push_str("ok;");
@@ -182,6 +184,23 @@ impl Clients
             }
         });
         Clients{running: running, _proxies: proxies, _control: control, _replyer: Some(replyer)}
+    }
+
+    fn remove_xml_comments(xml: &str) -> String {
+        // Create a regular expression to match XML comments
+        let comment_regex = Regex::new(r"<!--(.*?)-->").unwrap();
+
+        // Use the `replace_all` method to replace all matches with an empty string
+        let without_comments = comment_regex.replace_all(xml, "");
+
+        // Remove empty lines by filtering and joining non-empty lines
+        let without_empty_lines = without_comments
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .collect::<Vec<&str>>()
+            .join("\n");
+
+        without_empty_lines
     }
 
     /// Returns information of running server as JSON
