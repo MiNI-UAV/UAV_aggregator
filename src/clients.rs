@@ -28,7 +28,7 @@ impl Clients
         let hb_disconnect: usize = ServerConfig::get_usize("hb_disconnect");
         let replyer_port: usize = ServerConfig::get_usize("replyer_port");
         let first_port: usize = ServerConfig::get_usize("first_port");
-        
+        Self::check_config_folder();
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
         let replyer_socket = _ctx.socket(zmq::REP).expect("REP socket error");
@@ -206,8 +206,17 @@ impl Clients
     /// Returns information of running server as JSON
     fn getServerInfo() -> String
     {
-        let configs: Vec<String> = read_dir(DRONE_CONFIGS_PATH).unwrap()
-            .map(|p| p.unwrap().file_name().to_str().unwrap().split(".").next().unwrap().to_string()).collect();
+        let mut configs = Vec::<String>::new();
+
+        if let Ok(dir) = read_dir(DRONE_CONFIGS_PATH)
+        {
+            configs = dir.map(|p| p.unwrap().file_name().to_str().unwrap().split(".").next().unwrap().to_string()).collect();
+        }
+        else 
+        {
+            printLog!("Error: config directory can not be open.");    
+        }
+            
         let info = json!({
             "checksum": getChecksum(),
             "map": ServerConfig::get_str("map"),
@@ -284,6 +293,17 @@ impl Clients
         }
         drop(d);
         rep
+    }
+
+    fn check_config_folder()
+    {
+        if !std::fs::metadata(&DRONE_CONFIGS_PATH).is_ok() 
+        {
+            match std::fs::create_dir(&DRONE_CONFIGS_PATH) {
+                Ok(_) => printLog!("Drones config directory created"),
+                Err(_) => printLog!("Cannot create drones config directory"),
+            }
+        }
     }
 }
 
