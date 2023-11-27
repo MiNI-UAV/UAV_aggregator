@@ -110,10 +110,25 @@ impl Cargo
                     }
                     drop(obj_lck);
 
+                    let mut drone_forces_to_send: HashMap<&usize, (Vector3::<f32>, Vector3::<f32>)> = HashMap::new();
+
                     let drone_lck = _drones.lock().unwrap();
                     for (drone_id, _, force, torque) in &forceToSend {
-                        drone_lck.updateForce(drone_id,force,torque);
+
+                        if let Some(old_values) = drone_forces_to_send.get(drone_id)
+                        {
+                            drone_forces_to_send.insert(drone_id, (force + old_values.0, torque + old_values.1));
+                        }  
+                        else
+                        {
+                            drone_forces_to_send.insert(drone_id, (force.clone(),torque.clone()));
+                        } 
                     }
+                    for (k,v) in drone_forces_to_send
+                    {
+                        drone_lck.updateForce(k,&v.0,&v.1);
+                    }
+
                     drop(drone_lck);
                 }
                 thread::sleep(time::Duration::from_millis(2));
