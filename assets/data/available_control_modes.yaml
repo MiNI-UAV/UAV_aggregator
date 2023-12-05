@@ -23,6 +23,18 @@ modes:
   # Fixed-wing aircraft
   FMANUAL:
     reply:
+  FACRO:
+    reply:
+      - P
+      - Q
+      - R
+      - Z
+  FANGLE:
+    reply:
+      - ROLL
+      - PITCH
+      - YAW
+      - Z
   # Rocket
   RMANUAL:
     reply:
