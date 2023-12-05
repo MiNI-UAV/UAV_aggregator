@@ -28,13 +28,12 @@ modes:
       - P
       - Q
       - R
-      - Z
   FANGLE:
     reply:
       - ROLL
       - PITCH
       - YAW
-      - Z
+      - U
   # Rocket
   RMANUAL:
     reply:
