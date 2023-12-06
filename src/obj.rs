@@ -114,6 +114,8 @@ pub struct Face
     pub _normals: [Vector3<f32>;3],
     pub normal: Vector3<f32>,
     pub projectMatrix: Matrix3<f32>,
+    pub s: Vector3<f32>,
+    pub t: Vector3<f32>,
     pub base: Vector3<f32>
 }
 
@@ -136,6 +138,7 @@ impl Face {
 
         Face{id, _vertices: vertices, _normals: normals, normal: n,
                 projectMatrix: invProjectMatrix.try_inverse().expect("Can not inverse project matrix"),
+                s, t,
                 base: vertices[0].clone()}
     }
 
@@ -150,6 +153,38 @@ impl Face {
             return (true,res[2])
         } 
         (false, 0.0)
+    }
+
+    // Check if ray comes across triangle. Möller-Trumbore algorithm.
+    pub fn rayIntersection (&self, point: Vector3<f32>, dir: Vector3<f32>) -> (bool, f32)
+    {
+        static EPS: f32 = 1e-3f32;
+
+        let ray_t_cross = dir.cross(&self.t);
+        let det = self.s.dot(&ray_t_cross);
+        if det.abs() < EPS
+        {
+            return (false,0.0);
+        }
+        let invDet = 1.0f32/det;
+        let P = point - self.base;
+        let u = invDet * P.dot(&ray_t_cross);
+        if u < 0.0 || u > 1.0
+        {
+            return (false,0.0);
+        }
+        let P_cross_s = P.cross(&self.s);
+        let v = invDet * dir.dot(&P_cross_s);
+        if v < 0.0 || u + v > 1.0
+        {
+            return (false,0.0);
+        }
+        let t = invDet * self.t.dot(&P_cross_s);
+        if t > EPS
+        {
+            return (true,t);
+        }
+        (false,0.0)
     }
 }
 

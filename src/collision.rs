@@ -49,6 +49,8 @@ impl CollisionDetector
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
+            let mut loop_time = ServerConfig::get_f32("collisionLoopTime");
+            let nominal_loop_time  = time::Duration::from_secs_f32(loop_time);
             let mut meshes = HashMap::<String,DMatrix<f32>>::new();
             while r.load(Ordering::SeqCst) {
                 let start = Instant::now();
@@ -61,26 +63,27 @@ impl CollisionDetector
                 let objs_pos_vels_radius = obj_lck.getPosVelsRadius();
                 drop(obj_lck);
                 
+                //Drone collision with map
+                Self::impulse_collision_drone(&drones_pos_vel,&_drones,&mut meshes, &types,&map,loop_time);
+                Self::impulse_collision_projectiles(&objs_pos_vels_radius,&_objects,&map,loop_time);
+
+
                 //Collision between objects are negligible
                 Self::colisions_between_drones(&drones_pos_vel,map.minimalDist);
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels_radius,map.minimalDist);
-                
-                
-                //Drone collision with map
-                Self::impulse_collision_drone(&drones_pos_vel,&_drones,&mut meshes, &types,&map);
-                Self::impulse_collision_projectiles(&objs_pos_vels_radius,&_objects,&map);
-                //Second box
+
+                //Eliminate objects outside boundary box
                 Self::boundary_box_obj(&objs_pos_vels_radius, &_objects, box_min, box_max);
-                
-                //TEST
-                //Self::ground_objs(&objs_pos_vels, &_objects);
-                //Self::spring_dumper_drone(&drones_pos_vel,&_drones, &rotorsPositions);
-                
+                              
                 #[allow(unused_variables)]
                 let elapsed = start.elapsed();
-                //printLog!("Collision calc time: {} ms", elapsed.as_millis());
-                thread::sleep(time::Duration::from_millis(1));
-
+                if elapsed < nominal_loop_time
+                {
+                    thread::sleep(nominal_loop_time - elapsed);
+                }
+                let final_elapsed = start.elapsed();
+                loop_time = 0.7 * loop_time + 0.3 * final_elapsed.as_secs_f32();
+                //printLog!("Loop time: {} ms", loop_time * 1000f32); 
             }
         });
         CollisionDetector {running,
@@ -145,14 +148,14 @@ impl CollisionDetector
 
     /// Find all collision between Object and map walls. Handles collision
     fn impulse_collision_projectiles(objs_pos_vels_radius: &Vec<(usize,Vector3<f32>,Vector3<f32>,f32)>,
-    objects: &Arc<Mutex<Objects>>, map: &Map)
+    objects: &Arc<Mutex<Objects>>, map: &Map, loop_time: f32)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>)>::new();
 
         //For every drone
-        for (id, pos, _,radius) in objs_pos_vels_radius.iter()
+        for (id, pos, vel,radius) in objs_pos_vels_radius.iter()
         {
-            collisionsToSend.extend(map.checkWalls(*pos,*radius).iter().map(|n| (*id,n.clone())));
+            collisionsToSend.extend(map.checkWalls2(*pos,*vel,loop_time, *radius).iter().map(|n| (*id,n.clone())));
         }
         if !collisionsToSend.is_empty()
         {
@@ -173,23 +176,24 @@ impl CollisionDetector
     }
 
     /// Find all collision between UAV and map walls. Handles collision
-    fn impulse_collision_drone(objs_pos_vels: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
-        drones: &Arc<Mutex<Drones>>,meshes: &mut HashMap<String,DMatrix<f32>>, types: &Vec<String>, map: &Map)
+    fn impulse_collision_drone(uav_pos_vels: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
+        drones: &Arc<Mutex<Drones>>,meshes: &mut HashMap<String,DMatrix<f32>>, types: &Vec<String>, map: &Map, loop_time: f32)
     {
         let mut collisionsToSend = Vec::<(usize, Vector3<f32>, Vector3<f32>)>::new();
         
         //For every drone
-        for ((id, pos, ori, _, _),drone_type) in objs_pos_vels.iter().zip(types.iter())
+        for ((id, pos, ori, vel, angVel),drone_type) in uav_pos_vels.iter().zip(types.iter())
         {
             let mut best_depth = f32::MAX;
             let mut best_point: Vector3<f32> = Vector3::zeros();
             let mut best_normal: Vector3<f32> = Vector3::zeros();
             let rot = Self::quaterionToRot3(ori);
             let mesh = getMesh(meshes,drone_type);
-            let points = rot*mesh;
-            points.column_iter().for_each(|col| {
-                let point = col + pos;
-                if let Some((depth,normal)) = map.checkWallsBest(point)
+            mesh.column_iter().for_each(|col| {
+                let point = rot * col + pos;
+                let point_vel =  rot * (vel + angVel.cross(&col));
+                if let Some((depth,normal)) = 
+                    map.checkWallsBest2(point,point_vel, loop_time)
                 {
                     if depth < best_depth
                     {

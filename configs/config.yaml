@@ -7,8 +7,10 @@ map_offset: 30
 ###############################
 
 ########## COLLISIONS #########
-# collision grid size. Number of cubes in X, Y, Z
+# Collision grid size. Number of cubes in X, Y, Z
 grid: 100, 100, 10
+# Collision detect loop nominal period in sec.
+collisionLoopTime: 0.02
 # Tolerance in detecting collisions
 collisionPlusEps: 0.1
 collisionMinusEps: -0.3

@@ -69,6 +69,32 @@ impl Map
         normalsInColisionPoint
     }
 
+    /// Modified checkWalls, predict position in looptime
+    pub fn checkWalls2(&self, start_point: Vector3<f32>,velocity: Vector3<f32>, dt: f32, radius: f32) -> Vec<Vector3<f32>>
+    {
+        let mut normalsInColisionPoint = Vec::new();
+
+        for s in [0.0f32, 0.33f32, 0.66f32, 1.0f32]
+        {
+            let point = start_point + s * dt * velocity;
+            let chunk = self.calcChunk(point);
+            if let Some(faces) = self.facesInChunk.get(&chunk)
+            {
+                for face in faces {
+                    if let (true, mut dist) = face.projectPoint(point)
+                    {
+                        dist -= radius;
+                        if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+                        {
+                            normalsInColisionPoint.push(face.normal)
+                        }
+                    }
+                }
+            }
+        }
+        normalsInColisionPoint
+    }
+
     /// Checks if in specified point there is collision with map walls. 
     /// Returns normal vector of wall that is the closest to point
     /// If there is no collisions, return None
@@ -96,6 +122,37 @@ impl Map
         if bestDepth < self.collisionPlusEps
         {
             return Some((bestDepth,bestNormal));
+        }
+        None
+    }
+
+    /// Checks if in specified point there will collide with map walls in specificed dt. 
+    /// Returns normal vector of wall that will be cross in next dt
+    /// If there is no collisions, return None
+    pub fn checkWallsBest2(&self, point: Vector3<f32>, velocity: Vector3<f32>, dt: f32) -> Option<(f32,Vector3<f32>)>
+    {
+        let inRange = velocity.norm() * dt;
+        let dir = velocity.normalize();
+        let mut bestNormal = Vector3::<f32>::zeros();
+        let mut bestDist = inRange;
+
+        let chunk = self.calcChunk(point);
+        if let Some(faces) = self.facesInChunk.get(&chunk)
+        {
+            for face in faces {
+                if let (true, dist) = face.rayIntersection(point,dir)
+                {
+                    if dist < bestDist
+                    {
+                        bestDist = dist;
+                        bestNormal = face.normal;
+                    }
+                }
+            }
+        }
+        if bestDist < inRange
+        {
+            return Some((bestDist,bestNormal));
         }
         None
     }
