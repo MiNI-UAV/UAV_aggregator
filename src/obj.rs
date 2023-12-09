@@ -59,7 +59,12 @@ impl Obj
                     {
                         continue;
                     }
-                    assert_eq!(elements.len(), 4);
+                    
+                    if elements.len() != 4
+                    {
+                        printLog!("Face {} is invalid. Skipped", line);
+                        continue;
+                    }
 
                     let mut face_vertices = [Vector3::zeros();3];
                     let mut face_normals= [Vector3::zeros();3];
