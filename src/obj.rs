@@ -59,10 +59,10 @@ impl Obj
                     {
                         continue;
                     }
-                    
+
                     if elements.len() != 4
                     {
-                        printLog!("Face {} is invalid. Skipped", line);
+                        printLog!("Face {} is not triangle. Skipped", line);
                         continue;
                     }
 
