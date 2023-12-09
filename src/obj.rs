@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::hash::{Hash, Hasher};
 
+use crate::printLog;
+
 /// Parsed OBJ file
 pub struct Obj
 {
@@ -64,12 +66,13 @@ impl Obj
 
                     for (i, element) in elements[1..].iter().enumerate() {
                         let items: Vec<String> = element.split('/').map(|s| s.to_string()).collect();
-                        assert_eq!(items.len(), 3);
                         face_vertices[i] = vertices[items[0].parse::<usize>().unwrap()-1];
-                        if !items[2].is_empty()
+                        if items.len() < 3 || items[2].is_empty()
                         {
-                            face_normals[i] = normals[items[2].parse::<usize>().unwrap()-1];
+                            printLog!("Face {} is invalid. Skipped", line);
+                            continue;
                         }
+                        face_normals[i] = normals[items[2].parse::<usize>().unwrap()-1];
                     }
                     faces.push(Face::new(faces.len(),face_vertices,face_normals));
                 }
