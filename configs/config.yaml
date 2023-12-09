@@ -42,6 +42,14 @@ wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
 ###############################
 
+######### SIMULATION #########
+# Step time of uav physic simulation in ms
+uav_physic_step_time: 1
+# ODE algorithm in drop physic
+uav_physic_ode_solver: RK4
+# Step time of uav control system in ms
+uav_control_step_time: 1
+
 
 ######### DROP PHYSIC #########
 # Step time of drop physic simulation in ms

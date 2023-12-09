@@ -2,6 +2,7 @@ use std::{process::{Command, Child, Stdio}, thread::{self, JoinHandle}, sync::{M
 use nalgebra::{Vector3,Vector6, SVector, Vector4, geometry::Rotation3};
 use crate::{objects::{Objects, ObjectInfo}, logger, atmosphere::AtmosphereInfo};
 use crate::config::DroneConfig;
+use crate::config::ServerConfig;
 use crate::printLog;
 
 
@@ -117,6 +118,8 @@ impl UAV
         let simulation = Command::new("../UAV_physics_engine/build/uav")
             .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
+            .arg("--dt").arg(ServerConfig::get_usize("uav_physic_step_time").to_string())
+            .arg("--ode").arg(ServerConfig::get_str("uav_physic_ode_solver"))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -125,6 +128,7 @@ impl UAV
         let controller = Command::new("../UAV_controller/build/controller")
             .arg("-c").arg(&config_path)
             .arg("-n").arg(name)
+            .arg("--dt").arg(ServerConfig::get_usize("uav_control_step_time").to_string())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
