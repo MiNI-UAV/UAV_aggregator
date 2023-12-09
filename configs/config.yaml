@@ -48,7 +48,7 @@ uav_physic_step_time: 1
 # ODE algorithm in drop physic
 uav_physic_ode_solver: RK4
 # Step time of uav control system in ms
-uav_control_step_time: 1
+uav_control_step_time: 3
 
 
 ######### DROP PHYSIC #########
