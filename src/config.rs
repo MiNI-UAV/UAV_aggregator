@@ -198,11 +198,22 @@ impl DroneConfig {
         let root = Element::parse(contents.as_bytes())?;
         let name = root.get_child("name").unwrap().get_text().unwrap().to_string();
         let drone_type = root.get_child("type").unwrap().get_text().unwrap().to_string();
-
-        let cargo = root.get_child("cargo").unwrap().children.iter()
-        .map(|child| parse_cargo(child.as_element().unwrap())).collect();
-        let ammo = root.get_child("ammo").unwrap().children.iter()
-        .map(|child| parse_ammo(child.as_element().unwrap())).collect();
+        
+        let mut cargo = Vec::new(); 
+        if let Some(cargo_node) = root.get_child("cargo")
+        {
+            cargo = cargo_node.children.iter()
+                .filter(|child| child.as_element().is_some())
+                .map(|child| parse_cargo(child.as_element().unwrap())).collect();
+        }
+        
+        let mut ammo = Vec::new(); 
+        if let Some(ammo_node) = root.get_child("ammo")
+        {
+            ammo = ammo_node.children.iter()
+                .filter(|child| child.as_element().is_some())
+                .map(|child| parse_ammo(child.as_element().unwrap())).collect();
+        } 
 
         let drone_model = Obj::load_from_file(format!("./assets/drones/{}/model/model.obj", &drone_type.as_str()).as_str(),true);
         let mesh = drone_model.getMesh();

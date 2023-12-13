@@ -35,5 +35,7 @@ modes:
       - YAW
       - U
   # Rocket
+  RANUTOLAUNCH:
+    reply:
   RMANUAL:
     reply:
