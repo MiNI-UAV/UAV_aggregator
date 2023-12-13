@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time::{self, Instant}};
 use nalgebra::{Vector3,Vector4, DVector};
-use crate::{uav::{UAV,DroneState}, notification::Notification};
+use crate::{uav::{UAV,DroneState}, notification::{Notification, PromptColor, PromptCategory}};
 use crate::objects::Objects;
 use crate::config::ServerConfig;
 use crate::printLog;
@@ -55,6 +55,10 @@ impl Drones
                         result.push(',');
                         let state = elem.state_arc.lock().unwrap();
                         result.push_str(&state.to_string());
+                        if timeToNotify
+                        {
+                            check_acceleration(elem.id, state.getAcc(), notify_period);
+                        }
                         drop(state);
                         result.push(';');
                         if timeToNotify
@@ -250,6 +254,20 @@ impl Drones
         }
         drop(drone_lck);
     }
+}
+
+fn check_acceleration(id: usize, acceleration: Vector3<f32> , notify_period: u128)
+{
+    let accel = acceleration.norm();
+    if accel < 4.0f32
+    {
+        return;
+    }
+    let rounded = (accel * 2.0).round() / 2.0;
+    let message = format!("OVERLOAD {:.1}G", rounded);
+    Notification::sendPrompt(id as isize, PromptCategory::OVERLOAD,
+        if rounded >= 6.0f32 { PromptColor::RED } else { PromptColor::ORANGE },
+        2* notify_period as usize, &message)
 }
 
 /// Deconstructor
