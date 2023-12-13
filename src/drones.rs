@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, time::{self, Instant}};
 use nalgebra::{Vector3,Vector4, DVector};
-use crate::{uav::{UAV,DroneState}, notification::{Notification, PromptColor, PromptCategory}};
+use crate::{uav::{UAV,DroneState}, notification::{Notification, PromptColor, PromptCategory}, atmosphere::GRAVITY_ACCELERATION};
 use crate::objects::Objects;
 use crate::config::ServerConfig;
 use crate::printLog;
@@ -258,7 +258,7 @@ impl Drones
 
 fn check_acceleration(id: usize, acceleration: Vector3<f32> , notify_period: u128)
 {
-    let accel = acceleration.norm();
+    let accel = acceleration.norm()/GRAVITY_ACCELERATION;
     if accel < 4.0f32
     {
         return;
