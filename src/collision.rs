@@ -1,7 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time, collections::HashMap};
 use nalgebra::{Vector3,Vector4, Matrix3, DMatrix};
 use std::time::Instant;
-use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj};
+use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj, notification::Notification};
 use crate::printLog;
 
 /// Detect collision in simulation. Checks collision uav-map, obj-map uav-uav and uav-obj.
@@ -101,6 +101,10 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&dist).abs() < minimal_dist
                 {
+                    Notification::sendPrompt(obj1.0 as isize, crate::notification::PromptCategory::COLLISION,
+                         crate::notification::PromptColor::RED, 2000, "COLLISION");
+                    Notification::sendPrompt(obj2.0 as isize, crate::notification::PromptCategory::COLLISION,
+                    crate::notification::PromptColor::RED, 2000, "COLLISION");
                     printLog!("Collision detected between drone {} and {}", obj1.0,obj2.0);
                 }
             }
@@ -116,6 +120,8 @@ impl CollisionDetector
                 let dist: Vector3<f32> = obj1.1-obj2.1;
                 if dist.dot(&obj2.2) > 0.0 && dist.dot(&dist).abs() < minimal_dist
                 {
+                    Notification::sendPrompt(obj1.0 as isize, crate::notification::PromptCategory::COLLISION,
+                        crate::notification::PromptColor::ORANGE, 2000, "OBJECT DETECTED");
                     printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }

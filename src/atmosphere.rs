@@ -8,7 +8,7 @@ const R_AIR_CONSTANT: f32 = 287.052874;
 /// Temperature drop due to altitude rise
 const TEMP_ALTITUDE_RATE: f32 = 6.5e-3;
 /// Gravity constant on Earth
-const GRAVITY_ACCELERATION: f32 = 9.8067;
+pub const GRAVITY_ACCELERATION: f32 = 9.8067;
 
 /// Atmosphere simulation. Notify UAVs and Objects about atmosphere state.
 pub struct Atmosphere

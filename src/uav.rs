@@ -15,6 +15,8 @@ pub struct DroneState
     pos: SVector<f32,7>,
     /// linear and angular velocities in m/s and rad/s
     vel: Vector6<f32>,
+    /// linear and angular acceleration in rad/s^2 in body frame.
+    acc: Vector6<f32>,
     /// rotor angular velocities in rad/s
     om: Vec<f32>,
 }
@@ -22,7 +24,7 @@ pub struct DroneState
 impl DroneState {
     /// Constructor
     pub fn new() -> Self {
-        DroneState {time: 0.0, pos: SVector::repeat(0.0f32), vel: Vector6::repeat(0.0f32), om: Vec::new()}
+        DroneState {time: 0.0, pos: SVector::repeat(0.0f32), vel: Vector6::repeat(0.0f32), acc: Vector6::repeat(0.0f32), om: Vec::new()}
     }
 
     /// Get UAV position in meters
@@ -54,6 +56,12 @@ impl DroneState {
     pub fn getAngVel(&self) -> Vector3<f32>
     {
         self.vel.fixed_view::<3, 1>(3, 0).into()
+    }
+
+    /// Get linear acceleration vector in m/s^2
+    pub fn getAcc(&self) -> Vector3<f32>
+    {
+        self.acc.fixed_view::<3, 1>(0, 0).into()
     }
 
     /// Converts quaterion to RPY Euler angles
@@ -257,6 +265,7 @@ impl UAV
         let t_socket = buildSocket("t");
         let pos_socket = buildSocket("pos");
         let vel_socket = buildSocket("vn");
+        let acc_socket = buildSocket("ab");
         let om_socket = buildSocket("om");
 
         uav.state_listener = Option::Some(thread::spawn(move || {
@@ -265,6 +274,7 @@ impl UAV
                 let mut t = None;
                 let mut pos = None;
                 let mut vel = None;
+                let mut acc = None;
                 let mut om: Option<Vec<f32>> = None;
 
                 if let Ok(_) = t_socket.recv(&mut msg, 0)
@@ -286,6 +296,13 @@ impl UAV
                 let s = msg.as_str().unwrap();
                     //printLog!("{}", s);
                     vel = Some(parseToArray(s,3));
+                }
+
+                if let Ok(_) = acc_socket.recv(&mut msg, 0)
+                {
+                let s = msg.as_str().unwrap();
+                    //printLog!("{}", s);
+                    acc = Some(parseToArray(s,3));
                 }
 
                 if let Ok(_) = om_socket.recv(&mut msg, 0)
@@ -311,6 +328,10 @@ impl UAV
                 if let Some(vel_val) = vel
                 {
                     state.vel = vel_val;
+                }
+                if let Some(acc_val) = acc
+                {
+                    state.acc = acc_val;
                 }
                 if let Some(om_val) = om
                 {
