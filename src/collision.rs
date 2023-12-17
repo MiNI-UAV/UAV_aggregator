@@ -1,7 +1,7 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time, collections::HashMap};
 use nalgebra::{Vector3,Vector4, Matrix3, DMatrix};
 use std::time::Instant;
-use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj, notification::Notification};
+use crate::{drones::Drones, objects::Objects, map::Map, config::ServerConfig, obj::Obj, notification::{Notification, PromptCategory, PromptColor}};
 use crate::printLog;
 
 /// Detect collision in simulation. Checks collision uav-map, obj-map uav-uav and uav-obj.
@@ -219,6 +219,9 @@ impl CollisionDetector
             let drones_lck = drones.lock().unwrap();
             for (id,colisionPoint, normalVector) in &collisionsToSend {
                 drones_lck.sendSurfaceCollison(id, map.COR, map.mi_s, map.mi_d, colisionPoint, normalVector);
+                Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
+                    PromptColor::RED ,
+                    2000, "TERRAIN COLLISION")
             }
             drop(drones_lck);
         }

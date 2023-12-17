@@ -22,6 +22,7 @@ pub enum PromptCategory
     TEST = 0,
     OVERLOAD = 1,
     COLLISION = 2,
+    TERRAIN = 3,
 }
 
 impl PromptCategory {
