@@ -22,6 +22,8 @@ mi_s: 0.4
 mi_d: 0.3
 # Distance between aircraft and object when collision is detected
 minimalDist: 1.0
+# Destroy UAV on collision with terrain
+destroyOnCollision: true
 ###############################
 
 ############ LINKS ############
