@@ -23,12 +23,17 @@ impl Obj
 
     /// Read obj from file. Parsing normals and faces may be disable by setting verticesOnly to true.
     pub fn load_from_file(file_path: &str, verticesOnly: bool) -> Self {
-        let file = File::open(file_path).expect("Can not open file");
-        let reader = BufReader::new(file);
-
         let mut vertices = Vec::<Vector3<f32>>::new();
         let mut normals = Vec::<Vector3<f32>>::new();
         let mut faces = Vec::<Face>::new();
+
+        let file = File::open(file_path);
+        if file.is_err()
+        {
+            printLog!("Can not open file: {}. Assumed empty obj.", file_path);
+            return Obj{_vertices: vertices, _normals: normals,faces};
+        }
+        let reader = BufReader::new(file.unwrap());
 
         for line in reader.lines() 
         {
