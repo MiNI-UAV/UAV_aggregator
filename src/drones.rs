@@ -76,6 +76,10 @@ impl Drones
                     }
                     //printLog!("{}",result);
                 }
+                else
+                {
+                    publisher_socket.send(&";", 0).unwrap();
+                }
                 drop(drones);
                 thread::sleep(time::Duration::from_millis(10));
             }
