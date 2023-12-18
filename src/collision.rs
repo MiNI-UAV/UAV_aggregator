@@ -216,13 +216,26 @@ impl CollisionDetector
         }
         if !collisionsToSend.is_empty()
         {
-            let drones_lck = drones.lock().unwrap();
-            for (id,colisionPoint, normalVector) in &collisionsToSend {
-                drones_lck.sendSurfaceCollison(id, map.COR, map.mi_s, map.mi_d, colisionPoint, normalVector);
-                Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
-                    PromptColor::RED ,
-                    2000, "TERRAIN COLLISION")
+            let mut drones_lck = drones.lock().unwrap();
+            if ServerConfig::get_bool("destroyOnCollision")
+            {
+                for (id,_, _) in &collisionsToSend {
+                    drones_lck.removeUAV(*id);
+                    Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
+                            PromptColor::RED ,
+                            5000, "DESTROYED");
+                }
             }
+            else
+            {
+                for (id,colisionPoint, normalVector) in &collisionsToSend {
+                    drones_lck.sendSurfaceCollison(id, map.COR, map.mi_s, map.mi_d, colisionPoint, normalVector);
+                    Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
+                        PromptColor::ORANGE ,
+                        2000, "TERRAIN COLLISION");
+                } 
+            }
+            
             drop(drones_lck);
         }
     }
