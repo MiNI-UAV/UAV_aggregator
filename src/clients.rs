@@ -126,6 +126,7 @@ impl Clients
                                     if let Err(_) = control_pair_socket.recv(&mut request, 0)
                                     {
                                         skipedHeartbeats += 1;
+                                        printLog!("{}: Skipped heartbeat: {}", drone_no, skipedHeartbeats);
                                         if skipedHeartbeats == hb_disconnect
                                         {
                                             let mut d_lck = d2.lock().unwrap();
@@ -141,7 +142,9 @@ impl Clients
                                     drop(cargo_lck);
                                     drop(d_lck);
                                     control_pair_socket.send(&rep, 0).unwrap();
+                                    printLog!("{}: Sent: {}", drone_no, rep);
                                 }
+                                drop(control_pair_socket);
                             })
                         ));
                         drop(control);
@@ -229,6 +232,7 @@ impl Clients
     /// Handle incomming control message
     fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize) -> String
     {
+        printLog!("{}: Recived: {}", drone_no, msg);
         let mut splited = msg.split(";");
         let action = splited.next().unwrap();
         let mut params = Vec::<&str>::new();
