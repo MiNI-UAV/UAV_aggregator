@@ -108,7 +108,7 @@ impl Clients
                         drop(proxy);
                         printLog!("Ready to connect steer client on TCP: {}", first_port+slot);
 
-                        let control_pair_socket = _ctx.socket(zmq::PAIR).unwrap();
+                        let control_rep_socket = _ctx.socket(zmq::REP).unwrap();
                         let mut control = c.lock().unwrap();
                         let r2 = r.clone();
                         let d2 = drones.clone();
@@ -118,15 +118,15 @@ impl Clients
                             {
                                 let mut skipedHeartbeats: usize = 0;
                                 let mut local_running = true;
-                                control_pair_socket.set_rcvtimeo(1000).unwrap();
+                                control_rep_socket.set_rcvtimeo(1000).unwrap();
                                 let address = format!("tcp://*:{}", first_port+slot+1000);
-                                control_pair_socket.bind(&address).unwrap();
+                                control_rep_socket.bind(&address).unwrap();
                                 while r2.load(Ordering::SeqCst) && local_running {
                                     let mut request =  zmq::Message::new();
-                                    if let Err(_) = control_pair_socket.recv(&mut request, 0)
+                                    if let Err(_) = control_rep_socket.recv(&mut request, 0)
                                     {
                                         skipedHeartbeats += 1;
-                                        printLog!("{}: Skipped heartbeat: {}", drone_no, skipedHeartbeats);
+                                        printLog!("Drone {}: Skipped heartbeat: {}", drone_no, skipedHeartbeats);
                                         if skipedHeartbeats == hb_disconnect
                                         {
                                             let mut d_lck = d2.lock().unwrap();
@@ -141,10 +141,9 @@ impl Clients
                                     let rep = Clients::handleControlMsg(request.as_str().unwrap(), drone_no, &mut d_lck, &mut cargo_lck, &mut skipedHeartbeats);
                                     drop(cargo_lck);
                                     drop(d_lck);
-                                    control_pair_socket.send(&rep, 0).unwrap();
-                                    printLog!("{}: Sent: {}", drone_no, rep);
+                                    control_rep_socket.send(&rep, 0).unwrap();
                                 }
-                                drop(control_pair_socket);
+                                drop(control_rep_socket);
                             })
                         ));
                         drop(control);
@@ -232,7 +231,6 @@ impl Clients
     /// Handle incomming control message
     fn handleControlMsg(msg: &str, drone_no: usize, drones: &mut Drones, cargo: &mut Cargo,  skipedHeartbeats: &mut usize) -> String
     {
-        printLog!("{}: Recived: {}", drone_no, msg);
         let mut splited = msg.split(";");
         let action = splited.next().unwrap();
         let mut params = Vec::<&str>::new();
