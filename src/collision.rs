@@ -16,7 +16,10 @@ impl CollisionDetector
     /// Constructor
     pub fn new(_drones: Arc<Mutex<Drones>>, _objects: Arc<Mutex<Objects>>) -> Self
     {
-        let map_offset = ServerConfig::get_f32("map_offset");
+        let boundary_box_offset = ServerConfig::get_f32("boundaryBoxOffset");
+        let warn_boundary_box_offset = ServerConfig::get_f32("warnBoundaryBoxOffset");
+        let boundary_check_period = ServerConfig::get_usize("boundaryBoxCheckPeriod").try_into().unwrap();
+        let mut last_boundary_check = Instant::now();
         let mut map_path = "assets/maps/".to_string();
         map_path.push_str(ServerConfig::get_str("map").as_str());
         map_path.push_str("/model/model.obj");
@@ -43,9 +46,11 @@ impl CollisionDetector
             ServerConfig::get_f32("mi_d"),
             ServerConfig::get_f32("minimalDist"),
         );
-        let (mut box_min, mut box_max) = map.getMinMax();
-        box_min.add_scalar_mut(-map_offset);
-        box_max.add_scalar_mut(map_offset);
+        let (box_min, box_max) = map.getMinMax();
+        let boundary_box_min = box_min.add_scalar(-boundary_box_offset);
+        let boundary_box_max = box_max.add_scalar(boundary_box_offset);
+        let warn_boundary_box_min = box_min.add_scalar(-warn_boundary_box_offset);
+        let warn_boundary_box_max = box_max.add_scalar(warn_boundary_box_offset);
 
         let collision_checker: JoinHandle<()> = thread::spawn(move ||
         {
@@ -72,8 +77,14 @@ impl CollisionDetector
                 Self::colisions_between_drones(&drones_pos_vel,map.minimalDist);
                 Self::colisions_drones_obj(&drones_pos_vel, &objs_pos_vels_radius,map.minimalDist);
 
-                //Eliminate objects outside boundary box
-                Self::boundary_box_obj(&objs_pos_vels_radius, &_objects, box_min, box_max);
+                //Eliminate uav & objects outside boundary box
+                if last_boundary_check.elapsed().as_millis() > boundary_check_period
+                {
+                    last_boundary_check = Instant::now();
+                        Self::boundary_box_drones(&drones_pos_vel, &_drones, boundary_box_min,
+                            boundary_box_max, warn_boundary_box_min,warn_boundary_box_max);
+                        Self::boundary_box_obj(&objs_pos_vels_radius, &_objects, boundary_box_min, boundary_box_max);
+                }
                               
                 #[allow(unused_variables)]
                 let elapsed = start.elapsed();
@@ -125,6 +136,45 @@ impl CollisionDetector
                     printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }
+        }
+    }
+
+    #[allow(dead_code)]
+    /// Find uav outside boundary box and remove them
+    fn boundary_box_drones(drones_pos_vel_ori: &Vec<(usize,Vector3<f32>,Vector4<f32>,Vector3<f32>,Vector3<f32>)>,
+        objects: &Arc<Mutex<Drones>>, box_min: Vector3<f32>, box_max: Vector3<f32>,
+        warn_box_min: Vector3<f32>, warn_box_max: Vector3<f32>)
+    {
+        let mut dronesToKill = Vec::new();
+        let mut dronesToWarn = Vec::new();
+        for (id,pos,_,_,_) in drones_pos_vel_ori.iter() 
+        {
+
+            if box_min.inf(pos) != box_min || box_max.sup(pos) != box_max
+            {
+                dronesToKill.push(id);
+                continue;
+            }
+            if warn_box_min.inf(pos) != warn_box_min || warn_box_max.sup(pos) != warn_box_max
+            {
+                dronesToWarn.push(id);
+            }
+        }
+        if !dronesToKill.is_empty() || !dronesToWarn.is_empty() 
+        {
+            let mut drones_lck = objects.lock().unwrap();
+            for id in dronesToKill {
+                drones_lck.removeUAV(*id);
+                Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
+                    PromptColor::RED ,
+                    5000, "AREA LEFT. DESTOYED");
+            }
+            for id in dronesToWarn {
+                Notification::sendPrompt((*id) as isize, PromptCategory::TERRAIN,
+                    PromptColor::ORANGE ,
+                    500, "RETURN TO THE AREA");
+            }
+            drop(drones_lck);
         }
     }
 

@@ -2,8 +2,13 @@
 # Simulation map name. It mustcorrespond to one of map from assets
 map: city
 # Offset of map bounding box in meters. 
-# Bounding box is minimal cuboid that whole map is in. Loads out of cuboid are automatically remove.
-map_offset: 30
+# Bounding box is minimal cuboid that whole map is in. UAV and objects out of cubiod are automatically remove.
+boundaryBoxOffset: 300
+# Offset of map bounding box in meters. 
+# Bounding box is minimal cuboid that whole map is in. UAV and objects out of cubiod are automatically remove.
+warnBoundaryBoxOffset: 0
+# How often boundary should be checked in ms
+boundaryBoxCheckPeriod: 200
 ###############################
 
 ########## COLLISIONS #########

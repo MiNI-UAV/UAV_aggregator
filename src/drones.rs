@@ -74,7 +74,6 @@ impl Drones
                     {
                         Notification::sendMsg(&notifyTypesMsg);
                     }
-                    //printLog!("{}",result);
                 }
                 else
                 {
