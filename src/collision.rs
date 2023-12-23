@@ -116,7 +116,7 @@ impl CollisionDetector
                          crate::notification::PromptColor::RED, 2000, "COLLISION");
                     Notification::sendPrompt(obj2.0 as isize, crate::notification::PromptCategory::COLLISION,
                     crate::notification::PromptColor::RED, 2000, "COLLISION");
-                    printLog!("Collision detected between drone {} and {}", obj1.0,obj2.0);
+                    //printLog!("Collision detected between drone {} and {}", obj1.0,obj2.0);
                 }
             }
         }
@@ -133,7 +133,7 @@ impl CollisionDetector
                 {
                     Notification::sendPrompt(obj1.0 as isize, crate::notification::PromptCategory::COLLISION,
                         crate::notification::PromptColor::ORANGE, 2000, "OBJECT DETECTED");
-                    printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
+                    //printLog!("Collision detected between drone {} and object {}", obj1.0,obj2.0);
                 }
             }
         }

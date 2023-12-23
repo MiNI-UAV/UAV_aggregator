@@ -40,6 +40,11 @@ impl Obj
             let line = line.expect("Can not read line");
             let elements: Vec<&str> = line.trim().split_whitespace().collect();
             
+            if elements.is_empty()
+            {
+                continue;
+            }
+
             match elements[0] {
                 "v" => {
                     assert_eq!(elements.len(), 4);
@@ -73,18 +78,30 @@ impl Obj
 
                     let mut face_vertices = [Vector3::zeros();3];
                     let mut face_normals= [Vector3::zeros();3];
+                    let mut hasNormals = true;
 
                     for (i, element) in elements[1..].iter().enumerate() {
                         let items: Vec<String> = element.split('/').map(|s| s.to_string()).collect();
-                        face_vertices[i] = vertices[items[0].parse::<usize>().unwrap()-1];
-                        if items.len() < 3 || items[2].is_empty()
+                        if items.is_empty()
                         {
                             printLog!("Face {} is invalid. Skipped", line);
                             continue;
                         }
-                        face_normals[i] = normals[items[2].parse::<usize>().unwrap()-1];
+                        face_vertices[i] = vertices[items[0].parse::<usize>().unwrap()-1];
+                        if items.len() == 3
+                        {
+                            face_normals[i] = normals[items[2].parse::<usize>().unwrap()-1];
+                        }
+                        else 
+                        {
+                            hasNormals = false;
+                        } 
                     }
-                    faces.push(Face::new(faces.len(),face_vertices,face_normals));
+                    if !hasNormals
+                    {
+                        face_normals = [Vector3::zeros();3];
+                    }
+                    faces.push(Face::new(faces.len(),face_vertices, face_normals));
                 }
                 _ => continue,
             }
@@ -126,6 +143,7 @@ pub struct Face
     pub _vertices: [Vector3<f32>;3],
     pub _normals: [Vector3<f32>;3],
     pub normal: Vector3<f32>,
+    pub has_true_normals: bool,
     pub projectMatrix: Matrix3<f32>,
     pub s: Vector3<f32>,
     pub t: Vector3<f32>,
@@ -137,19 +155,30 @@ impl Face {
     /// Constructor
     pub fn new(id : usize , vertices: [Vector3<f32>;3],normals: [Vector3<f32>;3]) -> Self
     {
+        static EPS: f32 = 1e-3f32;
+
         let s = vertices[1]-vertices[0];
         let t = vertices[2]-vertices[0];
-        let v_mean = (normals[0] + normals[1] + normals[2])/3.0;
         let mut n = s.cross(&t);
-        if n.dot(&v_mean) < 0.0
+        let mut has_true_normals = true;
+        let v_mean = (normals[0] + normals[1] + normals[2])/3.0;
+        if v_mean.norm_squared() >  EPS
         {
-            n *= -1.0;
+            if n.dot(&v_mean) < 0.0
+            {
+                n *= -1.0;
+            }
         }
+        else 
+        {
+            has_true_normals = false;    
+        }
+        
         n.normalize_mut();
         let invProjectMatrix = Matrix3::from_columns(&[s,t,n]);
         //printLog!("Inv: {}", invProjectMatrix);
 
-        Face{id, _vertices: vertices, _normals: normals, normal: n,
+        Face{id, _vertices: vertices, _normals: normals, normal: n, has_true_normals,
                 projectMatrix: invProjectMatrix.try_inverse().expect("Can not inverse project matrix"),
                 s, t,
                 base: vertices[0].clone()}

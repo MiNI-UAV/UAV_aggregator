@@ -56,12 +56,18 @@ impl Map
         if let Some(faces) = self.facesInChunk.get(&chunk)
         {
             for face in faces {
-                if let (true, mut dist) = face.projectPoint(point)
+                if let (true, dist) = face.projectPoint(point)
                 {
-                    dist -= radius;
-                    if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+                    if dist - radius <= self.collisionPlusEps && dist - radius >= self.collisionMinusEps
                     {
                         normalsInColisionPoint.push(face.normal)
+                    }
+                    if !face.has_true_normals
+                    {
+                        if -dist - radius <= self.collisionPlusEps && -dist - radius >= self.collisionMinusEps
+                        {
+                            normalsInColisionPoint.push(-face.normal)
+                        }
                     }
                 }
             }
@@ -81,12 +87,18 @@ impl Map
             if let Some(faces) = self.facesInChunk.get(&chunk)
             {
                 for face in faces {
-                    if let (true, mut dist) = face.projectPoint(point)
+                    if let (true, dist) = face.projectPoint(point)
                     {
-                        dist -= radius;
-                        if dist <= self.collisionPlusEps && dist >= self.collisionMinusEps
+                        if dist - radius <= self.collisionPlusEps && dist - radius >= self.collisionMinusEps
                         {
                             normalsInColisionPoint.push(face.normal)
+                        }
+                        if !face.has_true_normals
+                        {
+                            if -dist - radius <= self.collisionPlusEps && -dist - radius >= self.collisionMinusEps
+                            {
+                                normalsInColisionPoint.push(-face.normal)
+                            }
                         }
                     }
                 }
@@ -98,6 +110,7 @@ impl Map
     /// Checks if in specified point there is collision with map walls. 
     /// Returns normal vector of wall that is the closest to point
     /// If there is no collisions, return None
+    /// WARNING: this function may work incorrectly when face has not got true normal vector
     pub fn checkWallsBest(&self, point: Vector3<f32>) -> Option<(f32,Vector3<f32>)>
     {
         let mut bestNormal = Vector3::<f32>::zeros();
@@ -144,8 +157,16 @@ impl Map
                 {
                     if dist < bestDist
                     {
-                        bestDist = dist;
-                        bestNormal = face.normal;
+                        if velocity.dot(&face.normal) < 0.0f32
+                        {
+                            bestDist = dist;
+                            bestNormal = face.normal;
+                        }
+                        else if !face.has_true_normals
+                        {
+                            bestDist = dist;
+                            bestNormal = -face.normal;
+                        }
                     }
                 }
             }
