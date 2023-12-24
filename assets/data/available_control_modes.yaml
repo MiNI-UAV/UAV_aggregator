@@ -19,7 +19,7 @@ modes:
       - P
       - Q
       - R
-      - Z
+      - THROTTLE
   # Fixed-wing aircraft
   FMANUAL:
     reply:
