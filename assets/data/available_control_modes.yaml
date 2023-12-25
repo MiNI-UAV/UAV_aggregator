@@ -39,3 +39,12 @@ modes:
     reply:
   RMANUAL:
     reply:
+  RANGLE:
+    reply:
+      - PITCH
+      - YAW
+  RGUIDED:
+    reply:
+      - X
+      - Y
+      - Z
