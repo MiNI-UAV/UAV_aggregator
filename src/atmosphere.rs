@@ -1,5 +1,6 @@
 use std::{thread::{JoinHandle, self}, sync::{Mutex, Arc, atomic::{AtomicBool, Ordering}}, time};
 use nalgebra::{Vector3, Matrix3};
+use rand::{rngs::ThreadRng, Rng};
 use crate::{drones::Drones, objects::Objects, config::ServerConfig};
 use crate::printLog;
 
@@ -42,23 +43,28 @@ impl Atmosphere
         let (wind_matrix, wind_bias) =  
             Atmosphere::parseWindFunction(&ServerConfig::get_str("wind_matrix"),
             &ServerConfig::get_str("wind_bias"));
+        let wind_turbulence_scale = ServerConfig::get_f32("wind_turbulence");
+
         let T0 = ServerConfig::get_f32("temperature");
         let p0 = ServerConfig::get_f32("pressure");
 
 
         let atmosphere_reqester: JoinHandle<()> = thread::spawn(move ||
         {
+            let mut wind_turbulence_rng: [rand::rngs::ThreadRng; 3] = Default::default();
+            let mut turbulence = Vector3::zeros();
             while r.load(Ordering::SeqCst) {
                 //Update aircrafts
                 let drones_lck = drones.lock().unwrap();
                 let pos = drones_lck.getPositions();
                 let mut infos = Vec::new();
+                Atmosphere::calcWindTurbulance(&mut turbulence,wind_turbulence_scale, &mut wind_turbulence_rng);
                 for p in pos
                 {
                     let (air_temperature,air_pressure, air_density) = calcAirInfo(&p.1,T0,p0);
                     let info = 
                         AtmosphereInfo{
-                            wind: Atmosphere::calcWind(&p.1,&wind_matrix,&wind_bias),
+                            wind: Atmosphere::calcWind(&p.1,&wind_matrix,&wind_bias) + turbulence,
                             air_temperature,
                             air_pressure,
                             air_density
@@ -104,6 +110,21 @@ impl Atmosphere
     {
         windBias + windMatrix * pos
     }
+
+    /// Returns next turbulance vector
+    fn calcWindTurbulance(turbulence: &mut Vector3<f32>, turbulence_scale: f32, rng: &mut [ThreadRng; 3])
+    {
+        if turbulence_scale < f32::EPSILON
+        {
+            return;
+        }
+        for i in 0..turbulence.len()
+        {
+            turbulence[i] = turbulence[i] + rng[i].gen_range(-turbulence_scale..turbulence_scale);
+            turbulence[i] = turbulence[i].clamp(-3.0 * turbulence_scale, 3.0 * turbulence_scale);
+        }
+    }
+
 
     /// Parses wind matrix and wind bias from string from configuration file.
     fn parseWindFunction(wind_matrix: &str, wind_bias: &str) -> (Matrix3<f32>, Vector3<f32>) {

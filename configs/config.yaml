@@ -1,6 +1,6 @@
 ############# MAP #############
 # Simulation map name. It mustcorrespond to one of map from assets
-map: city
+map: campus
 # Offset of map bounding box in meters. 
 # Bounding box is minimal cuboid that whole map is in. UAV and objects out of cubiod are automatically remove.
 boundaryBoxOffset: 300
@@ -47,6 +47,8 @@ pressure: 101300.0
 # Wind velocity in this place is equal wind_matrix * p + wind_bias
 wind_matrix: 0.0, 0.0, 0.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0
 wind_bias: 0.0, 0.0, 0.0
+# Wind turbulance scale factor
+wind_turbulence: 2.0
 ###############################
 
 ######### SIMULATION #########
