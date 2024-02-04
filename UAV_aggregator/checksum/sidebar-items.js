@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ASSETS_CHECKSUM_PATH","ASSETS_PATH"],"fn":["calcChecksum","getChecksum"]};

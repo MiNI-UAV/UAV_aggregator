@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=build/main.rs
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/runner/work/UAV_aggregator/UAV_aggregator/target/debug/build/typenum-b09cab45bc4c493f/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/home/runner/work/UAV_aggregator/UAV_aggregator/target/debug/build/typenum-b09cab45bc4c493f/out/op.rs

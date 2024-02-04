@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["GRAVITY_ACCELERATION","R_AIR_CONSTANT","TEMP_ALTITUDE_RATE"],"fn":["calcAirInfo","calcDensity","calcPressure","calcTemperature"],"struct":["Atmosphere","AtmosphereInfo"]};

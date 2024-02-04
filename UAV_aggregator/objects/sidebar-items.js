@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["sendModelInfo"],"struct":["ObjectInfo","ObjectState","Objects"]};

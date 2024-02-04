@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"UAV_aggregator":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.75.0/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"UAV_aggregator/notification/enum.PromptCategory.html\" title=\"enum UAV_aggregator::notification::PromptCategory\">PromptCategory</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

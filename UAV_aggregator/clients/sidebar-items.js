@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DRONE_CONFIGS_PATH"],"struct":["Clients"]};

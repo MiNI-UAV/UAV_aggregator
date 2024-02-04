@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PromptCategory","PromptColor"],"static":["NOTIFY_SOCKET","READY"],"struct":["Notification"]};

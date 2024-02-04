@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"UAV_aggregator":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.75.0/core/hash/trait.Hash.html\" title=\"trait core::hash::Hash\">Hash</a> for <a class=\"struct\" href=\"UAV_aggregator/obj/struct.Face.html\" title=\"struct UAV_aggregator::obj::Face\">Face</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
