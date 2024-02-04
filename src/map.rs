@@ -144,7 +144,7 @@ impl Map
     /// If there is no collisions, return None
     pub fn checkWallsBest2(&self, point: Vector3<f32>, velocity: Vector3<f32>, dt: f32) -> Option<(f32,Vector3<f32>)>
     {
-        let inRange = velocity.norm() * dt;
+        let inRange = (velocity.norm() * dt).max(-self.collisionMinusEps);
         let dir = velocity.normalize();
         let mut bestNormal = Vector3::<f32>::zeros();
         let mut bestDist = inRange;
